@@ -4,733 +4,896 @@
 
 ---
 
+> [!TIP]
+> **Téléchargement direct des images :**  
+> Tous les diagrammes ont été générés en **haute résolution (PNG)** et en **format vectoriel (SVG)** dans le dossier [`docs/diagrammes/`](./docs/diagrammes/).  
+> Vous pouvez également ouvrir la **Galerie Web interactive** : [docs/diagrammes/index.html](./docs/diagrammes/index.html) pour visualiser et télécharger chaque diagramme en 1 clic.
+
+---
+
 ## Sommaire
 1. [Formalisme & Acteurs du Système](#1-formalisme--acteurs-du-système)
-2. [Sprint 1 : Authentification, Profils & Véhicules (US1 à US4)](#sprint-1--authentification-profils--véhicules-us1-à-us4)
-3. [Sprint 2 : Emploi du temps & Publication des trajets (US5, US6)](#sprint-2--emploi-du-temps--publication-des-trajets-us5-us6)
-4. [Sprint 3 : Recherche, Carte, Réservation & Validation (US7 à US10)](#sprint-3--recherche-carte-réservation--validation-us7-à-us10)
-5. [Sprint 4 : Matching intelligent, Notifications & Trajet en direct (US11, US13, US21)](#sprint-4--matching-intelligent-notifications--trajet-en-direct-us11-us13-us21)
-6. [Sprint 5 : Communication, Évaluations, Signalements & Badges (US12, US14 à US17)](#sprint-5--communication-évaluations-signalements--badges-us12-us14-à-us17)
-7. [Sprint 6 : Administration, Sécurité SOS & Tableaux de bord (US18 à US20, US22)](#sprint-6--administration-sécurité-sos--tableaux-de-bord-us18-à-us20-us22)
-8. [Diagramme de Classes Global du Système](#8-diagramme-de-classes-global-du-système)
+2. [Sprint 1 : Authentification & Profil Étudiant](#sprint-1--authentification--profil-étudiant)
+3. [Sprint 2 : Publication & Gestion des Trajets Conducteur](#sprint-2--publication--gestion-des-trajets-conducteur)
+4. [Sprint 3 : Recherche Intelligente & Réservation Passager](#sprint-3--recherche-intelligente--réservation-passager)
+5. [Sprint 4 : Sécurité, Traçabilité & Mode Urgence (SOS)](#sprint-4--sécurité-traçabilité--mode-urgence-sos)
+6. [Sprint 5 : Communication, Évaluations & Gamification Éco-responsable](#sprint-5--communication-évaluations--gamification-éco-responsable)
+7. [Sprint 6 : Administration & Modération Campus](#sprint-6--administration--modération-campus)
+8. [Vue Globale du Système (Cas d'Utilisation & Classes)](#8-vue-globale-du-système)
 
 ---
 
 ## 1. Formalisme & Acteurs du Système
 
-Conformément au cahier des charges (§1.5) :
-- **Étudiant (Générique) :** Acteur de base ayant un compte universitaire (`@isetn.tn`), pouvant agir alternativement en tant que **Passager** ou **Conducteur**.
-- **Passager :** Étudiant cherchant un trajet, important son emploi du temps, réservant une place et évaluant son conducteur.
-- **Conducteur :** Étudiant possédant un véhicule enregistré, publiant des trajets réguliers ou ponctuels, acceptant les passagers.
-- **Administrateur :** Responsable du campus gérant les utilisateurs, traitant les signalements et supervisant les alertes SOS.
-- **Système (Acteur secondaire) :** Moteur automatique calculant les scores de compatibilité et distribuant les notifications temps réel.
-- **Service externe de Cartographie :** Fournisseur des tuiles et des calculs d'itinéraires (OpenStreetMap / Nominatim / OSRM).
+Conformément au cahier des charges et aux standards UML :
+- **Règle d'inclusion de l'authentification :** L'authentification (`s'authentifier`) est obligatoire pour réaliser l'ensemble des cas d'utilisation principaux des utilisateurs connectés. Par conséquent, chaque cas d'utilisation principal est relié au cas `s'authentifier` par une relation de dépendance stéréotypée **`«include»`** (`CasPrincipal -.->|«include»| S'authentifier`).
+- **Règle d'extension :** Les sous-actions optionnelles ou spécifiques étendent le cas d'utilisation principal via le stéréotype **`«extend»`** (`SousCas -.->|«extend»| CasPrincipal`).
+- **Acteurs :**
+  - **Étudiant (Membre) :** Acteur principal titulaire d'une adresse académique `@isetn.tn`.
+  - **Conducteur :** Étudiant véhiculé publiant des trajets et transportant des camarades.
+  - **Passager :** Étudiant recherchant des trajets et effectuant des réservations.
+  - **Administrateur Campus :** Responsable supervisant les flux, traitant les signalements et gérant les alertes SOS.
 
 ---
 
-## Sprint 1 : Authentification, Profils & Véhicules (US1 à US4)
+## Sprint 1 : Authentification & Profil Étudiant
 
 ### Objectifs
-- **US1 :** S'inscrire avec un e-mail universitaire (`@isetn.tn`) et choisir sa filière ISET.
-- **US2 :** Se connecter (JWT), se déconnecter et réinitialiser un mot de passe oublié via code reçu par e-mail.
-- **US3 :** Gérer son profil (photo, bio, adresse de départ pour le calcul de proximité, préférences).
-- **US4 :** Enregistrer et gérer son véhicule (marque, couleur, matricule, places, photo).
+- S'inscrire avec un e-mail `@isetn.tn` et vérifier le compte.
+- Récupérer son mot de passe via un code à 6 chiffres envoyé par e-mail.
+- Gérer son profil : coordonnées, préférences de covoiturage (fumeur, musique, mixité), emploi du temps et suppression de compte.
 
-### Diagramme de Cas d'Utilisation — Sprint 1
+### Diagramme des Cas d'Utilisation — Sprint 1
+*`s'authentifier` est inclus (`«include»`) dans le cas d'utilisation principal `gérer son profil`, et les sous-actions étendent (`«extend»`) le cas principal.*
+
+![Sprint 1 Use Case](./docs/diagrammes/sprint1_usecase.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint1_usecase.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint1_usecase.svg)
 
 ```mermaid
 flowchart LR
-    user["👤 Étudiant"]
-    cond["👤 Conducteur"]
-    user <|-- cond
-
-    subgraph Sprint1["UniRide — Sprint 1 (Gestion des comptes & Profils)"]
-        UC1(["S'inscrire (US1)"])
-        UC2(["S'authentifier (US2)"])
-        UC2_1(["Réinitialiser mot de passe (US2)"])
-        UC2_2(["Se déconnecter (US2)"])
-        UC3(["Gérer mon profil (US3)"])
-        UC3_1(["Définir préférences trajet (US3)"])
-        UC3_2(["Renseigner adresse de départ (US3)"])
-        UC3_3(["Ajouter contact de confiance (US3)"])
-        UC4(["Gérer mon véhicule (US4)"])
-        UC_VERIF(["Vérifier e-mail universitaire"])
+    Etu["👤 Étudiant (Membre ISET)"]
+    
+    subgraph S1["UniRide — Sprint 1 (Profil & Authentification)"]
+        Auth(["s'authentifier"]):::authUC
+        
+        CP_Profil(["gérer son profil étudiant"]):::mainUC
+        
+        Sub_Coords(["modifier coordonnées & photo"]):::subUC
+        Sub_Prefs(["définir préférences (fumeur, mixité)"]):::subUC
+        Sub_EDT(["importer emploi du temps"]):::subUC
+        Sub_Del(["supprimer son compte"]):::subUC
+        
+        UC_Inscr(["s'inscrire"]):::subUC
+        UC_Mail(["vérifier e-mail académique"]):::subUC
+        
+        UC_Forgot(["récupérer mot de passe oublié"]):::subUC
+        UC_Code(["recevoir code par e-mail"]):::subUC
     end
+    
+    Etu --> CP_Profil
+    CP_Profil -.->|"«include»"| Auth
+    
+    Sub_Coords -.->|"«extend»"| CP_Profil
+    Sub_Prefs -.->|"«extend»"| CP_Profil
+    Sub_EDT -.->|"«extend»"| CP_Profil
+    Sub_Del -.->|"«extend»"| CP_Profil
+    
+    Etu --> UC_Inscr
+    UC_Inscr -.->|"«include»"| UC_Mail
+    
+    Etu --> UC_Forgot
+    UC_Forgot -.->|"«include»"| UC_Code
 
-    user --> UC1
-    user --> UC2
-    user --> UC2_1
-    user --> UC2_2
-    user --> UC3
-    cond --> UC4
-
-    UC1 -.->|"«include»"| UC_VERIF
-    UC3 -.->|"«extend»"| UC3_1
-    UC3 -.->|"«extend»"| UC3_2
-    UC3 -.->|"«extend»"| UC3_3
+    classDef mainUC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px;
+    classDef authUC fill:#ecfdf5,stroke:#047857,stroke-width:2px;
+    classDef subUC fill:#ffffff,stroke:#334155,stroke-width:1.5px;
 ```
 
 ### Diagramme de Classes — Sprint 1
 
+![Sprint 1 Classes](./docs/diagrammes/sprint1_classes.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint1_classes.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint1_classes.svg)
+
 ```mermaid
 classDiagram
     class User {
-        +String id
-        +String nom
-        +String email
-        +String motDePasse
-        +String filiere
-        +String photo
-        +String telephone
-        +String role
-        +Date createdAt
+        +_id: ObjectId
+        +nom: string
+        +prenom: string
+        +email: string
+        +password: string
+        +telephone: string
+        +departement: string
+        +role: string = "student"
+        +isVerified: boolean
+        +resetPasswordCode: string
+        +resetPasswordExpires: Date
         +sInscrire() boolean
-        +sAuthentifier(email, mdp) String
-        +reinitialiserMotDePasse(code, nouveauMdp) boolean
-        +modifierProfil(nom, filiere, tel) void
+        +sAuthentifier(email, mdp) string
+        +reinitialiserMdp(code, newMdp) boolean
+        +modifierProfil(donnees) void
+        +importerEmploiDuTemps(file) void
         +supprimerCompte() boolean
     }
 
     class Preferences {
-        +boolean nonFumeur
-        +boolean mixte
-        +String musique
-        +boolean definies
-        +mettreAJour(nonFumeur, mixte, musique) void
+        +fumeur: boolean = false
+        +musique: boolean = true
+        +discussion: boolean = true
+        +climatisation: boolean = true
+        +mixite: string = "tous"
+        +mettreAJour(prefs) void
+        +getPreferences() Object
     }
 
-    class Domicile {
-        +String label
-        +float latitude
-        +float longitude
-        +definirPosition(label, lat, lng) void
+    class EmploiDuTemps {
+        +_id: ObjectId
+        +etudiantId: ObjectId
+        +jour: string
+        +heureDebut: string
+        +heureFin: string
+        +filiere: string
+        +groupe: string
+        +analyserCreneaux() Array
+        +estCompatible(trajetDate) boolean
     }
 
-    class ContactConfiance {
-        +String nom
-        +String telephone
-        +enregistrerContact(nom, tel) void
-    }
-
-    class Vehicule {
-        +String marque
-        +String couleur
-        +int places
-        +String matricule
-        +String photo
-        +ajouterVehicule(marque, coul, places, mat) void
-        +supprimerVehicule() void
-    }
-
-    User "1" *-- "0..1" Preferences : configure
-    User "1" *-- "0..1" Domicile : réside à
-    User "1" *-- "0..1" ContactConfiance : désigne
-    User "1" o-- "0..1" Vehicule : possède
+    User "1" *-- "1" Preferences : possède >
+    User "1" o-- "0..*" EmploiDuTemps : dispose de >
 ```
 
 ---
 
-## Sprint 2 : Emploi du temps & Publication des trajets (US5, US6)
+## Sprint 2 : Publication & Gestion des Trajets Conducteur
 
 ### Objectifs
-- **US5 :** Importer l'emploi du temps (fichier `.ics` / saisie manuelle) pour détecter automatiquement les heures d'arrivée et de départ chaque jour.
-- **US6 :** Publier un trajet ponctuel ou récurrent (du lundi au vendredi), calculer la durée, la distance et l'itinéraire via OpenStreetMap.
+- Enregistrer et gérer un véhicule (marque, modèle, immatriculation, places).
+- Publier un trajet régulier ou ponctuel avec étapes et participation symbolique aux frais.
+- Modifier, consulter ou annuler ses trajets en cours.
 
-### Diagramme de Cas d'Utilisation — Sprint 2
+### Diagramme des Cas d'Utilisation — Sprint 2
+
+![Sprint 2 Use Case](./docs/diagrammes/sprint2_usecase.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint2_usecase.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint2_usecase.svg)
 
 ```mermaid
 flowchart LR
-    pass["👤 Passager"]
-    cond["👤 Conducteur"]
-    osm["⚙️ API Cartographie (OSM)"]
-
-    subgraph Sprint2["UniRide — Sprint 2 (Emploi du temps & Offre de trajets)"]
-        UC5(["Gérer emploi du temps (US5)"])
-        UC5_1(["Importer fichier ICS / CSV (US5)"])
-        UC5_2(["Saisir créneaux manuellement (US5)"])
-        UC6(["Publier un trajet (US6)"])
-        UC6_1(["Définir récurrence hebdomadaire (US6)"])
-        UC6_2(["Modifier / Annuler mon trajet (US6)"])
-        UC_CALC(["Calculer itinéraire & durée"])
+    Cond["👤 Conducteur (Étudiant Véhiculé)"]
+    
+    subgraph S2["UniRide — Sprint 2 (Trajets & Véhicule Conducteur)"]
+        Auth(["s'authentifier"]):::authUC
+        
+        CP_Trajets(["gérer ses trajets"]):::mainUC
+        CP_Vehicule(["gérer son véhicule"]):::mainUC
+        
+        Sub_Publier(["publier un nouveau trajet"]):::subUC
+        Sub_Etapes(["définir étapes & prix symbolique"]):::subUC
+        Sub_Liste(["consulter ses trajets en cours"]):::subUC
+        Sub_Modif(["modifier détails d'un trajet"]):::subUC
+        Sub_Annul(["annuler un trajet programmé"]):::subUC
+        
+        Sub_VehReg(["enregistrer marque, modèle & matricule"]):::subUC
     end
+    
+    Cond --> CP_Trajets
+    CP_Trajets -.->|"«include»"| Auth
+    
+    Sub_Publier -.->|"«extend»"| CP_Trajets
+    Sub_Etapes -.->|"«extend»"| Sub_Publier
+    Sub_Liste -.->|"«extend»"| CP_Trajets
+    Sub_Modif -.->|"«extend»"| CP_Trajets
+    Sub_Annul -.->|"«extend»"| CP_Trajets
+    
+    Cond --> CP_Vehicule
+    CP_Vehicule -.->|"«include»"| Auth
+    Sub_VehReg -.->|"«extend»"| CP_Vehicule
 
-    pass --> UC5
-    cond --> UC6
-    cond --> UC6_2
-
-    UC5 -.->|"«extend»"| UC5_1
-    UC5 -.->|"«extend»"| UC5_2
-    UC6 -.->|"«extend»"| UC6_1
-    UC6 -.->|"«include»"| UC_CALC
-    UC_CALC --- osm
+    classDef mainUC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px;
+    classDef authUC fill:#ecfdf5,stroke:#047857,stroke-width:2px;
+    classDef subUC fill:#ffffff,stroke:#334155,stroke-width:1.5px;
 ```
 
 ### Diagramme de Classes — Sprint 2
 
+![Sprint 2 Classes](./docs/diagrammes/sprint2_classes.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint2_classes.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint2_classes.svg)
+
 ```mermaid
 classDiagram
     class User {
-        +String id
-        +String nom
-        +String email
+        +_id: ObjectId
+        +nom: string
+        +prenom: string
+        +email: string
+        +telephone: string
+        +sAuthentifier() string
+        +modifierProfil() void
     }
 
-    class Schedule {
-        +String id
-        +String userId
-        +Date updatedAt
-        +importerICS(fichier) boolean
-        +ajouterJour(nomJour, debut, fin) void
-        +getPlageHoraire(nomJour) PlageHoraire
+    class Conducteur {
+        +permisValide: boolean = true
+        +noteMoyenne: float
+        +nbTrajetsConducteur: int
+        +creerTrajet(trajet) Trajet
+        +modifierTrajet(id, data) void
+        +annulerTrajet(id) void
     }
 
-    class DaySchedule {
-        +String jour
-        +String heureDebut
-        +String heureFin
-        +boolean aCours
+    class Vehicule {
+        +marque: string
+        +modele: string
+        +immatriculation: string
+        +placesTotales: int = 4
+        +getDetailsVehicule() string
+        +mettreAJour(data) void
     }
 
-    class Ride {
-        +String id
-        +String conducteurId
-        +String heureDepart
-        +String heureArrivee
-        +boolean recurrent
-        +String[] jours
-        +Date date
-        +int places
-        +float prix
-        +float distanceKm
-        +int dureeMin
-        +String statut
-        +publierTrajet() boolean
-        +modifierTrajet(heure, places, prix) void
-        +annulerTrajet() boolean
+    class Trajet {
+        +_id: ObjectId
+        +conducteurId: ObjectId
+        +depart: string
+        +destination: string
+        +dateDepart: Date
+        +heureDepart: string
+        +placesDisponibles: int
+        +prixParPlace: float
+        +statut: string = "actif"
+        +fumeur: boolean
+        +climatise: boolean
+        +publier() boolean
+        +mettreAJour(data) void
+        +annuler() void
+        +reduirePlaces(nb) boolean
     }
 
-    class PointArret {
-        +String label
-        +float latitude
-        +float longitude
+    class Etape {
+        +lieu: string
+        +ordre: int
+        +heureEstimee: string
+        +getEtape() string
     }
 
-    User "1" -- "1" Schedule : possède
-    Schedule "1" *-- "1..6" DaySchedule : est composé de
-    User "1" -- "0..*" Ride : propose en tant que conducteur
-    Ride "1" *-- "1" PointArret : point de départ
-    Ride "1" *-- "1" PointArret : point de destination
+    User <|-- Conducteur
+    Conducteur "1" *-- "0..1" Vehicule : conduit >
+    Conducteur "1" -- "0..*" Trajet : propose >
+    Trajet "1" *-- "0..*" Etape : comporte >
 ```
 
 ---
 
-## Sprint 3 : Recherche, Carte, Réservation & Validation (US7 à US10)
+## Sprint 3 : Recherche Intelligente & Réservation Passager
 
 ### Objectifs
-- **US7 :** Rechercher un trajet avec filtres (destination ISET, date, plage horaire, prix max).
-- **US8 :** Visualiser le tracé routier sur une carte interactive (Leaflet / OpenStreetMap).
-- **US9 :** Réserver une ou plusieurs places et suivre le statut de la demande.
-- **US10 :** Permettre au conducteur d'accepter ou de refuser les demandes avec décrément atomique des places.
+- Rechercher des trajets avec filtres (date, créneau, compatibilité EDT).
+- Réserver des places et suivre le statut de la demande.
+- Valider ou refuser les demandes côté conducteur.
 
-### Diagramme de Cas d'Utilisation — Sprint 3
+### Diagramme des Cas d'Utilisation — Sprint 3
+
+![Sprint 3 Use Case](./docs/diagrammes/sprint3_usecase.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint3_usecase.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint3_usecase.svg)
 
 ```mermaid
 flowchart LR
-    pass["👤 Passager"]
-    cond["👤 Conducteur"]
-    osm["⚙️ OpenStreetMap"]
-
-    subgraph Sprint3["UniRide — Sprint 3 (Recherche, Carte & Réservation MVP)"]
-        UC7(["Rechercher un trajet (US7)"])
-        UC8(["Consulter trajet sur carte (US8)"])
-        UC9(["Réserver une place (US9)"])
-        UC9_1(["Annuler ma réservation (US9)"])
-        UC10(["Gérer les demandes reçues (US10)"])
-        UC10_1(["Accepter la réservation (US10)"])
-        UC10_2(["Refuser la réservation (US10)"])
+    Pass["👤 Passager (Étudiant)"]
+    Cond["👤 Conducteur (Étudiant)"]
+    
+    subgraph S3["UniRide — Sprint 3 (Recherche & Réservations)"]
+        Auth(["s'authentifier"]):::authUC
+        
+        CP_Rech(["rechercher un trajet"]):::mainUC
+        CP_ResPass(["gérer ses réservations"]):::mainUC
+        CP_DemCond(["gérer les demandes de réservation"]):::mainUC
+        
+        Sub_FiltreGeo(["filtrer par date & ville"]):::subUC
+        Sub_FiltreEDT(["filtrer selon emploi du temps"]):::subUC
+        Sub_ProfilCond(["consulter profil conducteur"]):::subUC
+        
+        Sub_FaireRes(["réserver des places"]):::subUC
+        Sub_SuivreRes(["suivre statut (confirmée/attente)"]):::subUC
+        Sub_AnnulRes(["annuler sa réservation"]):::subUC
+        
+        Sub_Accepter(["accepter la réservation"]):::subUC
+        Sub_Refuser(["refuser la réservation"]):::subUC
     end
+    
+    Pass --> CP_Rech
+    CP_Rech -.->|"«include»"| Auth
+    Sub_FiltreGeo -.->|"«extend»"| CP_Rech
+    Sub_FiltreEDT -.->|"«extend»"| CP_Rech
+    Sub_ProfilCond -.->|"«extend»"| CP_Rech
+    
+    Pass --> CP_ResPass
+    CP_ResPass -.->|"«include»"| Auth
+    Sub_FaireRes -.->|"«extend»"| CP_ResPass
+    Sub_SuivreRes -.->|"«extend»"| CP_ResPass
+    Sub_AnnulRes -.->|"«extend»"| CP_ResPass
+    
+    Cond --> CP_DemCond
+    CP_DemCond -.->|"«include»"| Auth
+    Sub_Accepter -.->|"«extend»"| CP_DemCond
+    Sub_Refuser -.->|"«extend»"| CP_DemCond
 
-    pass --> UC7
-    pass --> UC8
-    pass --> UC9
-    pass --> UC9_1
-    cond --> UC10
-
-    UC7 -.->|"«include»"| UC8
-    UC8 --- osm
-    UC9 -.->|"«include»"| UC7
-    UC10 -.->|"«extend»"| UC10_1
-    UC10 -.->|"«extend»"| UC10_2
+    classDef mainUC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px;
+    classDef authUC fill:#ecfdf5,stroke:#047857,stroke-width:2px;
+    classDef subUC fill:#ffffff,stroke:#334155,stroke-width:1.5px;
 ```
 
 ### Diagramme de Classes — Sprint 3
 
+![Sprint 3 Classes](./docs/diagrammes/sprint3_classes.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint3_classes.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint3_classes.svg)
+
 ```mermaid
 classDiagram
-    class Ride {
-        +String id
-        +int places
-        +float prix
-        +String statut
-        +rechercher(depart, date, heure) List~Ride~
-        +decrementerPlaces(nb) boolean
-        +incrementerPlaces(nb) void
-    }
-
-    class Booking {
-        +String id
-        +String trajetId
-        +String passagerId
-        +String conducteurId
-        +int places
-        +String statut
-        +Date createdAt
-        +creerDemande(places) boolean
-        +annulerDemande() boolean
-        +accepter() boolean
-        +refuser() boolean
-    }
-
     class User {
-        +String id
-        +String nom
-        +String telephone
+        +_id: ObjectId
+        +nom: string
+        +prenom: string
+        +email: string
+        +role: string
+        +sAuthentifier() string
     }
 
-    User "1" -- "0..*" Booking : effectue (Passager)
-    User "1" -- "0..*" Booking : reçoit (Conducteur)
-    Ride "1" -- "0..*" Booking : concerne
+    class Passager {
+        +totalReservations: int
+        +rechercherTrajets(criteres) Array
+        +reserverTrajet(trajetId, places) Reservation
+        +annulerReservation(id) boolean
+    }
+
+    class Conducteur {
+        +nbTrajets: int
+        +repondreReservation(id, decision) void
+    }
+
+    class Reservation {
+        +_id: ObjectId
+        +trajetId: ObjectId
+        +passagerId: ObjectId
+        +placesReservees: int = 1
+        +prixTotal: float
+        +statut: string = "en_attente"
+        +pointPriseEnCharge: string
+        +dateReservation: Date
+        +confirmer() void
+        +rejeter() void
+        +annuler() void
+    }
+
+    class Trajet {
+        +_id: ObjectId
+        +conducteurId: ObjectId
+        +placesDisponibles: int
+        +prixParPlace: float
+        +statut: string
+        +reduirePlaces(n) boolean
+        +libererPlaces(n) void
+    }
+
+    User <|-- Passager
+    User <|-- Conducteur
+    Passager "1" -- "0..*" Reservation : effectue >
+    Trajet "1" -- "0..*" Reservation : concerne >
+    Conducteur "1" -- "0..*" Trajet : propose >
 ```
 
 ---
 
-## Sprint 4 : Matching intelligent, Notifications & Trajet en direct (US11, US13, US21)
+## Sprint 4 : Sécurité, Traçabilité & Mode Urgence (SOS)
 
 ### Objectifs
-- **US11 :** Calculer automatiquement le score de compatibilité /100 entre passager et conducteur (35% proximité, 35% horaires, 15% préférences, 15% réputation).
-- **US13 :** Notifier en temps réel les étudiants (réservation acceptée, rappel départ 30 min, annulation).
-- **US21 :** Démarrer le trajet (mode direct), afficher la jauge d'avancement et le terminer avec statistiques générées.
+- Suivre le trajet en direct (validation départ, arrivée).
+- Déclencher l'alerte SOS d'urgence avec transmission des coordonnées GPS en temps réel.
+- Appeler les secours (197 / Protection Civile) ou prévenir la sécurité du campus ISET.
 
-### Diagramme de Cas d'Utilisation — Sprint 4
+### Diagramme des Cas d'Utilisation — Sprint 4
+
+![Sprint 4 Use Case](./docs/diagrammes/sprint4_usecase.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint4_usecase.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint4_usecase.svg)
 
 ```mermaid
 flowchart LR
-    pass["👤 Passager"]
-    cond["👤 Conducteur"]
-    sys["⚙️ Moteur de Calcul & Notifications"]
-
-    subgraph Sprint4["UniRide — Sprint 4 (Matching, Temps réel & Suivi de trajet)"]
-        UC11(["Consulter suggestions & score de compatibilité (US11)"])
-        UC11_1(["Voir détails du score /100 (US11)"])
-        UC13(["Recevoir notifications push / in-app (US13)"])
-        UC21_1(["Démarrer le trajet (US21)"])
-        UC21_2(["Suivre trajet en direct (US21)"])
-        UC21_3(["Terminer le trajet (US21)"])
+    Etu["👤 Étudiant (Passager / Conducteur)"]
+    
+    subgraph S4["UniRide — Sprint 4 (Sécurité & Urgence SOS)"]
+        Auth(["s'authentifier"]):::authUC
+        
+        CP_Suivi(["suivre le trajet en direct"]):::mainUC
+        CP_SOS(["déclencher alerte SOS urgence"]):::mainUC
+        
+        Sub_Depart(["valider départ du véhicule"]):::subUC
+        Sub_Verif(["vérifier identité du covoitureur"]):::subUC
+        Sub_Fin(["confirmer fin de course"]):::subUC
+        
+        Inc_GPS(["transmettre position GPS en direct"]):::subUC
+        Sub_Secours(["appeler les secours (Police 197)"]):::subUC
+        Sub_Campus(["alerter la sécurité du campus ISET"]):::subUC
     end
+    
+    Etu --> CP_Suivi
+    CP_Suivi -.->|"«include»"| Auth
+    Sub_Depart -.->|"«extend»"| CP_Suivi
+    Sub_Verif -.->|"«extend»"| CP_Suivi
+    Sub_Fin -.->|"«extend»"| CP_Suivi
+    
+    Etu --> CP_SOS
+    CP_SOS -.->|"«include»"| Auth
+    CP_SOS -.->|"«include»"| Inc_GPS
+    Sub_Secours -.->|"«extend»"| CP_SOS
+    Sub_Campus -.->|"«extend»"| CP_SOS
 
-    pass --> UC11
-    pass --> UC21_2
-    pass --> UC13
-    cond --> UC21_1
-    cond --> UC21_2
-    cond --> UC21_3
-    cond --> UC13
-
-    UC11 -.->|"«extend»"| UC11_1
-    UC11 --- sys
-    UC13 --- sys
-    UC21_1 -.->|"«include»"| UC13
-    UC21_3 -.->|"«include»"| UC13
+    classDef mainUC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px;
+    classDef authUC fill:#ecfdf5,stroke:#047857,stroke-width:2px;
+    classDef subUC fill:#ffffff,stroke:#334155,stroke-width:1.5px;
 ```
 
 ### Diagramme de Classes — Sprint 4
 
+![Sprint 4 Classes](./docs/diagrammes/sprint4_classes.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint4_classes.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint4_classes.svg)
+
 ```mermaid
 classDiagram
-    class MatchingEngine {
-        +calculerDistanceKm(p1, p2) float
-        +calculerScoreProximite(distance) float
-        +calculerScoreHoraires(heureTrajet, coursDebut) float
-        +calculerScorePreferences(prefCond, prefPass) float
-        +calculerScoreGlobal(passager, ride, schedule) MatchResult
+    class User {
+        +_id: ObjectId
+        +nom: string
+        +prenom: string
+        +telephone: string
+        +declencherSOS(coords) AlerteSOS
+        +validerArrivee() void
     }
 
-    class MatchResult {
-        +int scoreTotal
-        +float scoreProximite
-        +float scoreHoraires
-        +float scorePreferences
-        +float scoreAvis
-        +String[] explications
+    class Trajet {
+        +_id: ObjectId
+        +conducteurId: ObjectId
+        +statut: string = "en_cours"
+        +demarrerCourse() void
+        +cloturerCourse() void
     }
 
-    class Ride {
-        +String id
-        +String statut
-        +Date startedAt
-        +Date finishedAt
-        +demarrerTrajet() boolean
-        +terminerTrajet() SummaryResult
+    class CourseEnDirect {
+        +_id: ObjectId
+        +trajetId: ObjectId
+        +latitudeActuelle: float
+        +longitudeActuelle: float
+        +heureDebutReelle: Date
+        +heureFinReelle: Date
+        +statutGPS: string
+        +mettreAJourPosition(lat, lng) void
+        +calculerRetard() int
     }
 
-    class Notification {
-        +String id
-        +String destinataireId
-        +String emetteurId
-        +String type
-        +String titre
-        +String message
-        +boolean lu
-        +Date createdAt
-        +envoyerNotification() void
-        +marquerLu() void
+    class AlerteSOS {
+        +_id: ObjectId
+        +declencheurId: ObjectId
+        +trajetId: ObjectId
+        +latitude: float
+        +longitude: float
+        +dateDeclenchement: Date
+        +statut: string = "active"
+        +resoluePar: ObjectId
+        +genererAlerte(userId, coords) void
+        +marquerResolue(adminId) void
     }
 
-    MatchingEngine ..> MatchResult : génère
-    MatchingEngine ..> Ride : analyse
-    Ride ..> Notification : déclenche
+    class NotificationUrgence {
+        +_id: ObjectId
+        +alerteId: ObjectId
+        +destinataire: string
+        +canal: string = "SMS/Push"
+        +envoyee: boolean
+        +diffuserAlerte() boolean
+    }
+
+    User "1" -- "0..*" AlerteSOS : déclenche >
+    Trajet "1" -- "0..1" CourseEnDirect : fait l'objet de >
+    AlerteSOS "1" *-- "1..*" NotificationUrgence : génère >
+    AlerteSOS "0..*" -- "1" Trajet : concerne >
 ```
 
 ---
 
-## Sprint 5 : Communication, Évaluations, Signalements & Badges (US12, US14 à US17)
+## Sprint 5 : Communication, Évaluations & Gamification Éco-responsable
 
 ### Objectifs
-- **US12 :** Messagerie instantanée en temps réel (Socket.io) entre covoitureurs.
-- **US14 :** Noter mutuellement le covoitureur (1 à 5 étoiles, commentaire et sélection de compliments).
-- **US15 :** Signaler un utilisateur en cas de retard grave, conduite dangereuse ou comportement inapproprié.
-- **US16 & US17 :** Calculer l'argent économisé, les kg de CO₂ évités et débloquer les badges de mérite.
+- Évaluer ses covoitureurs (note sur 5 étoiles, commentaire textuel, signalement si litige).
+- Suivre les statistiques d'éco-mobilité (CO2 évité, DT économisés).
+- Débloquer des badges médaillés et consulter le classement campus.
 
-### Diagramme de Cas d'Utilisation — Sprint 5
+### Diagramme des Cas d'Utilisation — Sprint 5
+
+![Sprint 5 Use Case](./docs/diagrammes/sprint5_usecase.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint5_usecase.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint5_usecase.svg)
 
 ```mermaid
 flowchart LR
-    user["👤 Utilisateur (Passager / Conducteur)"]
-    userCible["👤 Covoitureur"]
-
-    subgraph Sprint5["UniRide — Sprint 5 (Communication, Confiance & Gamification)"]
-        UC12(["Échanger par chat en direct (US12)"])
-        UC14(["Évaluer un covoitureur (US14)"])
-        UC14_1(["Attribuer des compliments / badges (US17)"])
-        UC15(["Signaler un problème / utilisateur (US15)"])
-        UC16(["Consulter ses statistiques CO₂ et argent (US16)"])
-        UC17(["Consulter ses badges débloqués (US17)"])
+    Etu["👤 Étudiant (Membre UniRide)"]
+    
+    subgraph S5["UniRide — Sprint 5 (Avis & Gamification)"]
+        Auth(["s'authentifier"]):::authUC
+        
+        CP_Avis(["évaluer un covoiturage"]):::mainUC
+        CP_Eco(["consulter son impact & récompenses"]):::mainUC
+        
+        Sub_Note(["attribuer une note (1 à 5 étoiles)"]):::subUC
+        Sub_Comm(["rédiger un avis d'expérience"]):::subUC
+        Sub_Signaler(["signaler un comportement abusif"]):::subUC
+        
+        Sub_Stats(["visualiser CO2 & DT économisés"]):::subUC
+        Sub_Badges(["débloquer des badges éco-responsables"]):::subUC
+        Sub_Classement(["consulter le classement campus ISET"]):::subUC
     end
+    
+    Etu --> CP_Avis
+    CP_Avis -.->|"«include»"| Auth
+    Sub_Note -.->|"«extend»"| CP_Avis
+    Sub_Comm -.->|"«extend»"| CP_Avis
+    Sub_Signaler -.->|"«extend»"| CP_Avis
+    
+    Etu --> CP_Eco
+    CP_Eco -.->|"«include»"| Auth
+    Sub_Stats -.->|"«extend»"| CP_Eco
+    Sub_Badges -.->|"«extend»"| CP_Eco
+    Sub_Classement -.->|"«extend»"| CP_Eco
 
-    user --> UC12
-    user --> UC14
-    user --> UC15
-    user --> UC16
-    user --> UC17
-
-    UC12 <--> userCible
-    UC14 -.->|"«extend»"| UC14_1
+    classDef mainUC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px;
+    classDef authUC fill:#ecfdf5,stroke:#047857,stroke-width:2px;
+    classDef subUC fill:#ffffff,stroke:#334155,stroke-width:1.5px;
 ```
 
 ### Diagramme de Classes — Sprint 5
 
+![Sprint 5 Classes](./docs/diagrammes/sprint5_classes.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint5_classes.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint5_classes.svg)
+
 ```mermaid
 classDiagram
-    class Conversation {
-        +String id
-        +String[] participants
-        +String dernierMessage
-        +Date updatedAt
-        +creerOuRecuperer(u1, u2) Conversation
+    class User {
+        +_id: ObjectId
+        +nom: string
+        +prenom: string
+        +email: string
+        +evaluerUtilisateur(avis) Avis
+        +signaler(signalement) void
     }
 
-    class Message {
-        +String id
-        +String conversationId
-        +String auteurId
-        +String texte
-        +Date createdAt
-        +envoyer() void
+    class Avis {
+        +_id: ObjectId
+        +auteurId: ObjectId
+        +cibleId: ObjectId
+        +trajetId: ObjectId
+        +note: int
+        +commentaire: string
+        +dateCreation: Date
+        +publier() boolean
+        +modifier(note, comm) void
     }
 
-    class Review {
-        +String id
-        +String auteurId
-        +String cibleId
-        +String trajetId
-        +int note
-        +String commentaire
-        +String[] badges
-        +String roleCible
-        +Date createdAt
-        +enregistrerAvis() void
+    class StatistiquesEco {
+        +_id: ObjectId
+        +userId: ObjectId
+        +co2EconomiseKg: float
+        +argentEconomiseDT: float
+        +totalKmPartages: float
+        +totalTrajetsRealises: int
+        +ajouterTrajet(km, nbPass) void
+        +getBilanCarbone() Object
     }
 
-    class Report {
-        +String id
-        +String auteurId
-        +String utilisateurSignaleId
-        +String trajetId
-        +String motif
-        +String commentaire
-        +String statut
-        +Date createdAt
-        +soumettreSignalement() void
+    class Badge {
+        +code: string
+        +titre: string
+        +description: string
+        +icone: string
+        +seuilKm: int
+        +verifierEligibilite(stats) boolean
+        +debloquer(userId) void
     }
 
-    class StatisticsAndBadges {
-        +float argentEconomise
-        +float co2EviteKg
-        +int trajetsEffectues
-        +String[] badgesObtenus
-        +calculerStatistiques(userId) void
-        +verifierDeblocageBadges(userId) void
+    class Signalement {
+        +_id: ObjectId
+        +auteurId: ObjectId
+        +cibleId: ObjectId
+        +trajetId: ObjectId
+        +motif: string
+        +details: string
+        +statut: string = "en_attente"
+        +soumettre() boolean
+        +traiter(decision) void
     }
 
-    Conversation "1" *-- "0..*" Message : contient
-    User "1" -- "0..*" Review : rédige
-    User "1" -- "0..*" Review : reçoit
-    User "1" -- "0..*" Report : signale / est signalé
-    User "1" -- "1" StatisticsAndBadges : possède
+    User "1" -- "0..*" Avis : rédige >
+    User "1" *-- "1" StatistiquesEco : cumule >
+    StatistiquesEco "0..*" -- "0..*" Badge : débloque >
+    Avis "1" -- "0..*" Signalement : signale >
 ```
 
 ---
 
-## Sprint 6 : Administration, Sécurité SOS & Tableaux de bord (US18 à US20, US22)
+## Sprint 6 : Administration & Modération Campus
 
 ### Objectifs
-- **US18 :** Gérer les utilisateurs (consulter, bloquer/débloquer avec motif, supprimer un compte).
-- **US19 :** Traiter les signalements avec compteurs en temps réel (À traiter, Traités, Rejetés) et décision administrative.
-- **US20 :** Tableau de bord global avec KPIs (étudiants actifs, taux de satisfaction, conducteurs, trajets effectués).
-- **US22 :** Bouton SOS (envoi SMS du lien GPS au contact de confiance, alerte temps réel Socket.io à l'administration, numéros nationaux 197/190/198).
+- Superviser la plateforme (dashboard en temps réel, alertes SOS actives).
+- Gérer les utilisateurs (liste étudiants, rôles, blocage/déblocage de comptes).
+- Traiter ou classer les signalements.
 
-### Diagramme de Cas d'Utilisation — Sprint 6
+### Diagramme des Cas d'Utilisation — Sprint 6
+
+![Sprint 6 Use Case](./docs/diagrammes/sprint6_usecase.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint6_usecase.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint6_usecase.svg)
 
 ```mermaid
 flowchart LR
-    admin["👮 Administrateur ISET"]
-    user["👤 Étudiant en danger"]
-    contact["📞 Contact de confiance (ICE)"]
-    secours["🚑 Secours (197 / 190 / 198)"]
-
-    subgraph Sprint6["UniRide — Sprint 6 (Administration & Sécurité SOS)"]
-        UC18(["Gérer les utilisateurs (US18)"])
-        UC18_1(["Bloquer un utilisateur (US18)"])
-        UC18_2(["Débloquer un utilisateur (US18)"])
-        UC19(["Traiter les signalements (US19)"])
-        UC20(["Consulter tableau de bord KPI (US20)"])
-        UC22(["Déclencher une alerte SOS (US22)"])
-        UC22_1(["Marquer l'alerte résolue (US22)"])
+    Admin["👤 Administrateur (Campus ISET)"]
+    
+    subgraph S6["UniRide — Sprint 6 (Administration & Modération)"]
+        Auth(["s'authentifier"]):::authUC
+        
+        CP_Superv(["superviser la plateforme"]):::mainUC
+        CP_GestUser(["gérer les utilisateurs & signalements"]):::mainUC
+        
+        Sub_Stats(["consulter statistiques & indicateurs"]):::subUC
+        Sub_LiveSOS(["superviser alertes SOS en direct"]):::subUC
+        Sub_CloseSOS(["clôturer incident SOS résolu"]):::subUC
+        
+        Sub_ListUsers(["consulter comptes étudiants"]):::subUC
+        Sub_TraitSig(["traiter / classer signalement"]):::subUC
+        Sub_Block(["bloquer ou débloquer étudiant"]):::subUC
     end
+    
+    Admin --> CP_Superv
+    CP_Superv -.->|"«include»"| Auth
+    Sub_Stats -.->|"«extend»"| CP_Superv
+    Sub_LiveSOS -.->|"«extend»"| CP_Superv
+    Sub_CloseSOS -.->|"«extend»"| CP_Superv
+    
+    Admin --> CP_GestUser
+    CP_GestUser -.->|"«include»"| Auth
+    Sub_ListUsers -.->|"«extend»"| CP_GestUser
+    Sub_TraitSig -.->|"«extend»"| CP_GestUser
+    Sub_Block -.->|"«extend»"| CP_GestUser
 
-    user --> UC22
-    admin --> UC18
-    admin --> UC19
-    admin --> UC20
-    admin --> UC22_1
-
-    UC18 -.->|"«extend»"| UC18_1
-    UC18 -.->|"«extend»"| UC18_2
-    UC22 --> contact
-    UC22 --> secours
-    UC22_1 -.->|"«include»"| UC20
+    classDef mainUC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px;
+    classDef authUC fill:#ecfdf5,stroke:#047857,stroke-width:2px;
+    classDef subUC fill:#ffffff,stroke:#334155,stroke-width:1.5px;
 ```
 
 ### Diagramme de Classes — Sprint 6
 
+![Sprint 6 Classes](./docs/diagrammes/sprint6_classes.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/sprint6_classes.png) | [Format Vectoriel SVG](./docs/diagrammes/sprint6_classes.svg)
+
 ```mermaid
 classDiagram
-    class AdminDashboardService {
-        +getStatistiquesGlobales() DashboardKPI
-        +getTopConducteurs() List~User~
-        +getGrapheActivite7Jours() GraphData
-    }
-
-    class Sos {
-        +String id
-        +String auteurId
-        +String trajetId
-        +float latitude
-        +float longitude
-        +int precisionM
-        +String statut
-        +String resoluPar
-        +Date resoluLe
-        +String noteAdmin
-        +Date createdAt
-        +declencherAlerte(lat, lng) void
-        +marquerResolue(adminId, note) void
-    }
-
-    class Report {
-        +String id
-        +String statut
-        +String decision
-        +traiter(statut, decision, bloquerCible) void
-    }
-
     class User {
-        +String id
-        +boolean bloque
-        +String bloqueRaison
-        +Date bloqueLe
-        +bloquer(raison) void
-        +debloquer() void
+        +_id: ObjectId
+        +nom: string
+        +prenom: string
+        +email: string
+        +role: string
+        +isBlocked: boolean
+        +sAuthentifier() string
     }
 
-    AdminDashboardService ..> User : supervise
-    AdminDashboardService ..> Report : comptabilise
-    AdminDashboardService ..> Sos : surveille en direct
-    User "1" -- "0..*" Sos : déclenche
+    class Administrateur {
+        +niveauAcces: string = "superadmin"
+        +derniereConnexionAdmin: Date
+        +consulterDashboard() DashboardStats
+        +bloquerUtilisateur(id, motif) boolean
+        +debloquerUtilisateur(id) boolean
+        +traiterSignalement(id, action) void
+        +resoudreAlerteSOS(id) void
+    }
+
+    class DashboardStats {
+        +nbEtudiantsInscrits: int
+        +nbConducteursActifs: int
+        +nbTrajetsTotal: int
+        +nbSOSActifs: int
+        +nbSignalementsEnAttente: int
+        +totalCO2EviteKg: float
+        +calculerIndicateurs() Object
+        +exporterRapport() Object
+    }
+
+    class HistoriqueActionAdmin {
+        +_id: ObjectId
+        +adminId: ObjectId
+        +action: string
+        +cibleId: ObjectId
+        +motif: string
+        +dateAction: Date
+        +journaliser() void
+    }
+
+    User <|-- Administrateur
+    Administrateur "1" -- "1" DashboardStats : consulte >
+    Administrateur "1" -- "0..*" HistoriqueActionAdmin : enregistre >
 ```
 
 ---
 
-## 8. Diagramme de Classes Global du Système
+## 8. Vue Globale du Système
 
-Ce diagramme unifie l'intégralité du modèle de données et des composants métiers du projet UniRide :
+### Diagramme Global des Cas d'Utilisation
+
+![Vue Globale Cas d'utilisation](./docs/diagrammes/global_usecase.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/global_usecase.png) | [Format Vectoriel SVG](./docs/diagrammes/global_usecase.svg)
+
+```mermaid
+flowchart TD
+    EtuGen["👤 Étudiant (Général)"]
+    Cond["👤 Conducteur"]
+    Pass["👤 Passager"]
+    Admin["👤 Administrateur Campus"]
+
+    EtuGen <|-- Cond
+    EtuGen <|-- Pass
+
+    subgraph GlobalUniRide["Plateforme Globale UniRide (ISET Nabeul)"]
+        Auth(["s'authentifier"]):::authUC
+        
+        UC_Inscr(["s'inscrire / valider email"]):::subUC
+        UC_Profil(["gérer son profil & préférences"]):::mainUC
+        UC_Traj(["publier & gérer trajets"]):::mainUC
+        UC_Veh(["enregistrer véhicule"]):::mainUC
+        UC_Rech(["rechercher trajets selon EDT"]):::mainUC
+        UC_Res(["gérer réservations"]):::mainUC
+        UC_SOS(["suivre trajet & alerte SOS"]):::mainUC
+        UC_Eco(["évaluer covoitureur & badges"]):::mainUC
+        UC_AdminMod(["modérer signalements & comptes"]):::mainUC
+        UC_AdminDash(["superviser dashboard & SOS"]):::mainUC
+    end
+
+    EtuGen --> UC_Inscr
+    EtuGen --> UC_Profil
+    UC_Profil -.->|"«include»"| Auth
+
+    Cond --> UC_Traj
+    UC_Traj -.->|"«include»"| Auth
+    Cond --> UC_Veh
+    UC_Veh -.->|"«include»"| Auth
+
+    Pass --> UC_Rech
+    UC_Rech -.->|"«include»"| Auth
+    Pass --> UC_Res
+    UC_Res -.->|"«include»"| Auth
+
+    EtuGen --> UC_SOS
+    UC_SOS -.->|"«include»"| Auth
+    EtuGen --> UC_Eco
+    UC_Eco -.->|"«include»"| Auth
+
+    Admin --> UC_AdminMod
+    UC_AdminMod -.->|"«include»"| Auth
+    Admin --> UC_AdminDash
+    UC_AdminDash -.->|"«include»"| Auth
+
+    classDef mainUC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px;
+    classDef authUC fill:#ecfdf5,stroke:#047857,stroke-width:2px;
+    classDef subUC fill:#ffffff,stroke:#334155,stroke-width:1.5px;
+```
+
+---
+
+### Diagramme Global des Classes du Système
+
+![Vue Globale Diagramme de Classes](./docs/diagrammes/global_classes.png)
+
+📥 **Téléchargements :** [Format Image PNG](./docs/diagrammes/global_classes.png) | [Format Vectoriel SVG](./docs/diagrammes/global_classes.svg)
 
 ```mermaid
 classDiagram
     class User {
-        +String id
-        +String nom
-        +String email
-        +String motDePasse
-        +String filiere
-        +String photo
-        +String telephone
-        +String role
-        +float noteMoyenne
-        +int nombreAvis
-        +boolean bloque
-        +Date createdAt
+        +_id: ObjectId
+        +nom: string
+        +prenom: string
+        +email: string
+        +telephone: string
+        +role: string
+        +isBlocked: boolean
+        +sAuthentifier() string
         +sInscrire() boolean
-        +sAuthentifier() String
         +modifierProfil() void
-        +supprimerCompte() boolean
+    }
+
+    class Conducteur {
+        +permisValide: boolean
+        +creerTrajet() Trajet
+    }
+
+    class Passager {
+        +totalReservations: int
+        +reserver() Reservation
+    }
+
+    class Administrateur {
+        +derniereConnexion: Date
+        +traiterSignalement() void
     }
 
     class Vehicule {
-        +String marque
-        +String couleur
-        +int places
-        +String matricule
-        +String photo
+        +marque: string
+        +modele: string
+        +immatriculation: string
+        +getDetails() string
     }
 
-    class Schedule {
-        +String id
-        +DaySchedule[] jours
-        +importerICS(file) void
+    class Trajet {
+        +_id: ObjectId
+        +conducteurId: ObjectId
+        +depart: string
+        +destination: string
+        +dateDepart: Date
+        +placesDisponibles: int
+        +prix: float
+        +statut: string
+        +publier() boolean
+        +annuler() void
+        +reduirePlaces(n) boolean
     }
 
-    class DaySchedule {
-        +String jour
-        +String heureDebut
-        +String heureFin
-    }
-
-    class Ride {
-        +String id
-        +PointArret depart
-        +PointArret destination
-        +String heureDepart
-        +String heureArrivee
-        +boolean recurrent
-        +String[] jours
-        +Date date
-        +int places
-        +float prix
-        +float distanceKm
-        +int dureeMin
-        +String statut
-        +demarrer() void
-        +terminer() void
+    class Reservation {
+        +_id: ObjectId
+        +trajetId: ObjectId
+        +passagerId: ObjectId
+        +placesReservees: int
+        +statut: string
+        +confirmer() void
         +annuler() void
     }
 
-    class PointArret {
-        +String label
-        +float latitude
-        +float longitude
+    class AlerteSOS {
+        +_id: ObjectId
+        +declencheurId: ObjectId
+        +latitude: float
+        +longitude: float
+        +statut: string
+        +declencher() void
+        +resoudre() void
     }
 
-    class Booking {
-        +String id
-        +int places
-        +String statut
-        +Date createdAt
-        +accepter() void
-        +refuser() void
-        +annuler() void
+    class Avis {
+        +_id: ObjectId
+        +auteurId: ObjectId
+        +cibleId: ObjectId
+        +note: int
+        +commentaire: string
+        +publier() boolean
     }
 
-    class Review {
-        +String id
-        +int note
-        +String commentaire
-        +String[] badges
-        +String roleCible
-        +Date createdAt
+    class Signalement {
+        +_id: ObjectId
+        +auteurId: ObjectId
+        +cibleId: ObjectId
+        +motif: string
+        +statut: string
+        +traiter(action) void
     }
 
-    class Report {
-        +String id
-        +String motif
-        +String commentaire
-        +String statut
-        +String decision
-        +Date createdAt
-    }
+    User <|-- Conducteur
+    User <|-- Passager
+    User <|-- Administrateur
 
-    class Conversation {
-        +String id
-        +String dernierMessage
-        +Date updatedAt
-    }
-
-    class Message {
-        +String id
-        +String texte
-        +Date createdAt
-    }
-
-    class Notification {
-        +String id
-        +String type
-        +String titre
-        +String message
-        +boolean lu
-        +Date createdAt
-    }
-
-    class Sos {
-        +String id
-        +float latitude
-        +float longitude
-        +String statut
-        +Date resoluLe
-        +Date createdAt
-    }
-
-    %% Relations d'héritage et d'association
-    User "1" o-- "0..1" Vehicule : possède
-    User "1" -- "1" Schedule : a pour emploi du temps
-    Schedule "1" *-- "1..6" DaySchedule : détaille
-
-    User "1" -- "0..*" Ride : propose en tant que conducteur
-    Ride "1" *-- "1" PointArret : départ
-    Ride "1" *-- "1" PointArret : destination
-
-    Ride "1" -- "0..*" Booking : rassemble
-    User "1" -- "0..*" Booking : réserve en tant que passager
-
-    User "1" -- "0..*" Review : rédige
-    User "1" -- "0..*" Review : est évalué dans
-
-    User "1" -- "0..*" Report : soumet
-    User "1" -- "0..*" Report : est signalé par
-
-    Conversation "1" *-- "0..*" Message : contient
-    User "2" -- "0..*" Conversation : dialogue dans
-
-    User "1" -- "0..*" Notification : reçoit
-    User "1" -- "0..*" Sos : émet
-    Ride "0..1" -- "0..*" Sos : localisé sur
+    Conducteur "1" *-- "0..1" Vehicule : conduit >
+    Vehicule "1" -- "0..*" Trajet : effectué avec >
+    Passager "1" -- "0..*" Reservation : effectue >
+    Trajet "1" -- "0..*" Reservation : concerne >
+    Reservation "1" -- "0..*" AlerteSOS : déclenche >
+    Reservation "1" -- "0..1" Avis : évalue >
+    Administrateur "1" -- "0..*" Signalement : modère >
 ```
