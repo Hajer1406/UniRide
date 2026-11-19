@@ -1,0 +1,74 @@
+const mongoose = require('mongoose');
+
+const COULEURS = ['blanc', 'noir', 'gris', 'argent', 'rouge', 'bleu', 'vert', 'jaune', 'orange', 'marron', 'autre'];
+
+const vehiculeSchema = new mongoose.Schema(
+  {
+    marque: { type: String, required: true, trim: true },
+    couleur: { type: String, enum: COULEURS, required: true },
+    places: { type: Number, required: true, min: 1, max: 8 },
+    matricule: { type: String, required: true, trim: true },
+    photo: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
+const userSchema = new mongoose.Schema(
+  {
+    nom: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    motDePasse: { type: String, required: true },
+    filiere: { type: String, default: '' },
+    adresse: { type: String, default: '' },
+    // Adresse approximative géolocalisée (sert au calcul de proximité du matching)
+    domicile: {
+      type: new mongoose.Schema(
+        {
+          label: { type: String, required: true },
+          location: {
+            type: { type: String, enum: ['Point'], default: 'Point' },
+            coordinates: { type: [Number], required: true },
+          },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
+    photo: { type: String, default: '' },
+    telephone: { type: String, default: '' },
+    role: { type: String, enum: ['utilisateur', 'admin'], default: 'utilisateur' },
+    noteMoyenne: { type: Number, default: 0 },
+    nombreAvis: { type: Number, default: 0 },
+    badges: { type: [String], default: ['pionnier'] },
+    statistiques: {
+      co2Economise: { type: Number, default: 0 },
+      argentEconomise: { type: Number, default: 0 },
+      trajetsEffectues: { type: Number, default: 0 },
+    },
+    preferences: {
+      // Pas de valeurs par défaut : undefined = "non renseigné" = pas d'affichage sur le profil
+      nonFumeur: { type: Boolean },
+      mixte: { type: Boolean },
+      musique: { type: String, enum: ['calme', 'animee', 'aucune'] },
+      // Marqueur : true uniquement si l'utilisateur a sauvegardé ses préférences au moins une fois
+      definies: { type: Boolean, default: false },
+    },
+    vehicule: { type: vehiculeSchema, default: null },
+    // Bouton SOS : personne prévenue par SMS avec la position (US22)
+    contactConfiance: {
+      nom: { type: String, default: '', trim: true },
+      telephone: { type: String, default: '', trim: true },
+    },
+    // Administration (US18)
+    bloque: { type: Boolean, default: false },
+    bloqueRaison: { type: String, default: '' },
+    bloqueLe: { type: Date, default: null },
+    derniereActivite: { type: Date, default: Date.now },
+    // Mot de passe oublié : code à 6 chiffres (haché) valable 15 minutes
+    resetCode: { type: String, default: null, select: false },
+    resetExpire: { type: Date, default: null, select: false },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model('User', userSchema);

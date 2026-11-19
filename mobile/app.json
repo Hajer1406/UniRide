@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "UniRide",
+    "slug": "mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "tn.isetnabeul.uniride"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D47A1",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "tn.isetnabeul.uniride"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "title": "UniRide — Covoiturage étudiant ISET Nabeul",
+      "description": "Partagez vos trajets avec les étudiants de l'ISET Nabeul.",
+      "lang": "fr",
+      "themeColor": "#003B95",
+      "backgroundColor": "#F8FAFC"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "UniRide utilise votre position uniquement pour l'alerte SOS pendant un trajet."
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment variables (secrets)
+.env
+.env.*
+!.env.example
+backend/.env
+
+# Expo & Web build artifacts
+.expo/
+mobile/.expo/
+dist/
+mobile/dist/
+web-build/
+mobile/web-build/
+expo-env.d.ts
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Temporary archives
+sauvegarde_sprint5_avant_correction.zip
