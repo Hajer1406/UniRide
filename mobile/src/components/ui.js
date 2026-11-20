@@ -494,17 +494,21 @@ export function Loader({ text }) {
 export function ConfirmModal({
   visible,
   title,
+  titre,
   message,
   confirmLabel = 'Confirmer',
   cancelLabel = 'Annuler',
-  confirmVariant = 'primary',
+  confirmVariant,
+  variant,
   icon = 'help-circle-outline',
   onConfirm,
   onCancel,
   loading = false,
 }) {
-  const iconBg = confirmVariant === 'danger' ? colors.dangerSoft : confirmVariant === 'success' ? colors.successSoft : colors.primarySoft;
-  const iconColor = confirmVariant === 'danger' ? colors.danger : confirmVariant === 'success' ? colors.success : colors.primary;
+  const displayTitle = title || titre;
+  const v = confirmVariant || variant || 'primary';
+  const iconBg = v === 'danger' ? colors.dangerSoft : v === 'success' ? colors.successSoft : colors.primarySoft;
+  const iconColor = v === 'danger' ? colors.danger : v === 'success' ? colors.success : colors.primary;
 
   return (
     <Modal visible={!!visible} transparent animationType="fade" onRequestClose={onCancel || onConfirm}>
@@ -513,7 +517,7 @@ export function ConfirmModal({
           <View style={[styles.modalIconBox, { backgroundColor: iconBg }]}>
             <Ionicons name={icon} size={28} color={iconColor} />
           </View>
-          <Text style={[font.h3, { textAlign: 'center', marginTop: spacing.md }]}>{title}</Text>
+          <Text style={[font.h3, { textAlign: 'center', marginTop: spacing.md }]}>{displayTitle}</Text>
           {message ? (
             <Text style={[font.small, { textAlign: 'center', color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.md, lineHeight: 18 }]}>
               {message}
@@ -525,7 +529,7 @@ export function ConfirmModal({
             ) : null}
             <Button
               title={confirmLabel}
-              variant={confirmVariant}
+              variant={v}
               style={{ flex: cancelLabel ? 1 : undefined, minWidth: cancelLabel ? undefined : 130 }}
               onPress={onConfirm}
               loading={loading}

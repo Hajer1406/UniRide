@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import api from '../api';
-import { EmptyState, ErrorState, Header, Ionicons, Loader, Segmented } from '../components/ui';
+import { ConfirmModal, EmptyState, ErrorState, Header, Ionicons, Loader, Segmented } from '../components/ui';
 import { useRealtime } from '../context/AuthContext';
 import { useDonnees } from '../hooks';
 import { iconeNotification, ouvrirNotification } from '../notifications';
@@ -12,6 +12,7 @@ import { tempsRelatif } from '../utils';
 /** Centre de notifications (US13). */
 export default function NotificationsScreen({ navigation }) {
   const [filtre, setFiltre] = useState('toutes');
+  const [notifModal, setNotifModal] = useState(null);
   const { rafraichirCompteurs } = useRealtime();
   const { data, setData, chargement, erreur, rafraichir, rafraichissement, recharger, reessayer } = useDonnees(() =>
     api.get('/notifications').then((r) => r.data.notifications)
@@ -37,7 +38,10 @@ export default function NotificationsScreen({ navigation }) {
         .catch(() => {});
       setData((l) => l.map((x) => (x._id === n._id ? { ...x, lu: true } : x)));
     }
-    ouvrirNotification(navigation, n);
+    const navigue = ouvrirNotification(navigation, n);
+    if (!navigue) {
+      setNotifModal(n);
+    }
   };
 
   if (chargement) return <Loader />;
@@ -65,7 +69,7 @@ export default function NotificationsScreen({ navigation }) {
           value={filtre}
           onChange={setFiltre}
           options={[
-            { value: 'toutes', label: 'Toutes' },
+            { value: 'toutes', label: 'Toutes', count: data.length },
             { value: 'non_lues', label: 'Non lues', count: nonLues },
           ]}
         />
@@ -92,6 +96,23 @@ export default function NotificationsScreen({ navigation }) {
             </Pressable>
           );
         }}
+      />
+      <ConfirmModal
+        visible={!!notifModal}
+        icon={notifModal?.type === 'sos' ? 'alert-circle' : 'notifications'}
+        variant={notifModal?.type === 'sos' ? 'danger' : 'primary'}
+        title={notifModal?.titre || 'Notification'}
+        message={notifModal?.message || ''}
+        confirmLabel={notifModal?.message?.includes('http') ? 'Ouvrir sur Maps' : 'OK'}
+        cancelLabel={notifModal?.message?.includes('http') ? 'Fermer' : null}
+        onConfirm={() => {
+          const matchUrl = notifModal?.message?.match(/https?:\/\/[^\s]+/);
+          if (matchUrl) {
+            Linking.openURL(matchUrl[0]).catch(() => {});
+          }
+          setNotifModal(null);
+        }}
+        onCancel={() => setNotifModal(null)}
       />
     </View>
   );
