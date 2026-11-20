@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import api from '../api';
-import { Avatar, Badge, Button, Card, EmptyState, ErrorState, Header, Loader, Row, ScoreBadge, Screen, Segmented, Stars } from '../components/ui';
+import { Avatar, Badge, Button, Card, ConfirmModal, EmptyState, ErrorState, Header, Loader, Row, ScoreBadge, Screen, Segmented, Stars } from '../components/ui';
 import { useDonnees } from '../hooks';
 import { colors, font, radius, spacing } from '../theme';
 import { court, erreurApi, quand } from '../utils';
@@ -11,6 +11,8 @@ export default function BookingRequestsScreen({ route, navigation }) {
   const trajetId = route.params?.trajetId;
   const [onglet, setOnglet] = useState('en_attente');
   const [action, setAction] = useState(null);
+  const [refuserCible, setRefuserCible] = useState(null);
+  const [erreurMsg, setErreurMsg] = useState(null);
   const { data, chargement, erreur, rafraichir, rafraichissement, recharger, reessayer } = useDonnees(
     () => api.get('/bookings/requests', { params: trajetId ? { trajetId } : {} }).then((r) => r.data),
     [trajetId]
@@ -22,31 +24,27 @@ export default function BookingRequestsScreen({ route, navigation }) {
       await api.patch(`/bookings/${b._id}/accept`);
       await recharger();
     } catch (err) {
-      Alert.alert('Impossible d’accepter', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     } finally {
       setAction(null);
     }
   };
 
-  const refuser = (b) =>
-    Alert.alert(b.statut === 'acceptee' ? 'Retirer ce passager ?' : 'Refuser la demande ?', `${b.passager?.nom} sera prévenu(e).`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: b.statut === 'acceptee' ? 'Retirer' : 'Refuser',
-        style: 'destructive',
-        onPress: async () => {
-          setAction(b._id);
-          try {
-            await api.patch(`/bookings/${b._id}/refuse`);
-            await recharger();
-          } catch (err) {
-            Alert.alert('Action impossible', erreurApi(err));
-          } finally {
-            setAction(null);
-          }
-        },
-      },
-    ]);
+  const refuser = (b) => setRefuserCible(b);
+
+  const execRefuser = async () => {
+    const b = refuserCible;
+    setRefuserCible(null);
+    setAction(b._id);
+    try {
+      await api.patch(`/bookings/${b._id}/refuse`);
+      await recharger();
+    } catch (err) {
+      setErreurMsg(erreurApi(err));
+    } finally {
+      setAction(null);
+    }
+  };
 
   if (chargement) return <Loader />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -78,7 +76,7 @@ export default function BookingRequestsScreen({ route, navigation }) {
         <EmptyState
           icon="people-outline"
           title={onglet === 'en_attente' ? 'Aucune demande en attente' : 'Rien ici'}
-          text={onglet === 'en_attente' ? 'Vous serez notifié dès qu’un étudiant demande une place.' : null}
+          text={onglet === 'en_attente' ? "Vous serez notifié dès qu'un étudiant demande une place." : null}
         />
       ) : (
         liste.map((b) => {
@@ -133,6 +131,26 @@ export default function BookingRequestsScreen({ route, navigation }) {
           );
         })
       )}
+
+      <ConfirmModal
+        visible={!!refuserCible}
+        icon="person-remove"
+        variant="danger"
+        titre={refuserCible?.statut === 'acceptee' ? 'Retirer ce passager ?' : 'Refuser la demande ?'}
+        message={refuserCible ? `${refuserCible.passager?.nom} sera prévenu(e).` : ''}
+        confirmLabel={refuserCible?.statut === 'acceptee' ? 'Retirer' : 'Refuser'}
+        onConfirm={execRefuser}
+        onCancel={() => setRefuserCible(null)}
+      />
+      <ConfirmModal
+        visible={!!erreurMsg}
+        icon="alert-circle"
+        variant="danger"
+        titre="Action impossible"
+        message={erreurMsg}
+        cancelLabel={null}
+        onConfirm={() => setErreurMsg(null)}
+      />
     </Screen>
   );
 }

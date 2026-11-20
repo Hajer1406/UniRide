@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import api from '../api';
 import AddressPicker from '../components/AddressPicker';
 import TimeInput from '../components/TimeInput';
-import { Button, Card, Chip, Field, Header, Input, Loader, Notice, Row, Screen, Segmented, Stepper } from '../components/ui';
+import { Button, Card, Chip, ConfirmModal, Field, Header, Input, Loader, Notice, Row, Screen, Segmented, Stepper } from '../components/ui';
 import { colors, font, radius, spacing } from '../theme';
 import { HEURE, JOURS, dateISO, erreurApi } from '../utils';
 
@@ -32,6 +32,7 @@ export default function PublishRideScreen({ navigation }) {
   const [date, setDate] = useState(dateISO());
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
+  const [successMsg, setSuccessMsg] = useState(null);
 
   useEffect(() => {
     api
@@ -56,6 +57,13 @@ export default function PublishRideScreen({ navigation }) {
     if (!HEURE.test(heure)) return setErreur("Heure de départ au format HH:MM (ex : 07:45).");
     if (!Number.isFinite(montant) || montant < 0) return setErreur('Indiquez un prix valide (0 si gratuit).');
     if (recurrent === 'recurrent' && jours.length === 0) return setErreur('Choisissez au moins un jour.');
+    if (recurrent !== 'recurrent' && date === dateISO()) {
+      const maintenant = new Date();
+      const heureActuelle = `${String(maintenant.getHours()).padStart(2, '0')}:${String(maintenant.getMinutes()).padStart(2, '0')}`;
+      if (heure <= heureActuelle) {
+        return setErreur(`L'heure de départ (${heure}) est déjà passée pour aujourd'hui (il est ${heureActuelle}). Choisissez une heure future.`);
+      }
+    }
 
     setEnvoi(true);
     try {
@@ -69,11 +77,7 @@ export default function PublishRideScreen({ navigation }) {
         jours: recurrent === 'recurrent' ? jours : [],
         date: recurrent === 'recurrent' ? undefined : date,
       });
-      Alert.alert(
-        'Trajet publié',
-        `${String(data.distanceKm).replace('.', ',')} km · environ ${data.dureeMin} min · arrivée prévue à ${data.heureArrivee}.\nLes étudiants compatibles ont été prévenus.`,
-        [{ text: 'Voir mes trajets', onPress: () => navigation.replace('MyRides') }]
-      );
+      setSuccessMsg(`${String(data.distanceKm).replace('.', ',')} km · environ ${data.dureeMin} min · arrivée prévue à ${data.heureArrivee}.\nLes étudiants compatibles ont été prévenus.`);
     } catch (err) {
       setErreur(erreurApi(err));
     } finally {
@@ -185,6 +189,17 @@ export default function PublishRideScreen({ navigation }) {
       </Card>
 
       {erreur ? <Notice tone="danger" icon="alert-circle-outline" text={erreur} /> : null}
+
+      <ConfirmModal
+        visible={!!successMsg}
+        icon="checkmark-circle"
+        variant="success"
+        titre="Trajet publié !"
+        message={successMsg}
+        confirmLabel="Voir mes trajets"
+        cancelLabel={null}
+        onConfirm={() => { setSuccessMsg(null); navigation.replace('MyRides'); }}
+      />
     </Screen>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import api from '../api';
-import { Avatar, Badge, Button, Card, EmptyState, ErrorState, Header, Loader, RouteLine, Row, Screen, Segmented, Stars } from '../components/ui';
+import { Avatar, Badge, Button, Card, ConfirmModal, EmptyState, ErrorState, Header, Loader, RouteLine, Row, Screen, Segmented, Stars } from '../components/ui';
 import { useDonnees } from '../hooks';
 import { colors, font, spacing } from '../theme';
 import { court, erreurApi, prix, quand } from '../utils';
@@ -67,29 +67,27 @@ function CarteReservation({ b, navigation, onAnnuler }) {
   );
 }
 
-/** Liste des réservations (passager) — utilisée dans l'onglet Trajets et l'écran Mes réservations. */
+/** Liste des réservations (passager) – utilisée dans l'onglet Trajets et l'écran Mes réservations. */
 export function BookingsList({ navigation }) {
   const [filtre, setFiltre] = useState('avenir');
+  const [annulerCible, setAnnulerCible] = useState(null);
+  const [erreurMsg, setErreurMsg] = useState(null);
   const { data, chargement, erreur, rafraichir, rafraichissement, recharger, reessayer } = useDonnees(() =>
     api.get('/bookings/my').then((r) => r.data)
   );
 
-  const annuler = (b) =>
-    Alert.alert('Annuler la réservation ?', 'Le conducteur sera prévenu et la place sera libérée.', [
-      { text: 'Non', style: 'cancel' },
-      {
-        text: 'Oui, annuler',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.patch(`/bookings/${b._id}/cancel`);
-            recharger();
-          } catch (err) {
-            Alert.alert('Annulation impossible', erreurApi(err));
-          }
-        },
-      },
-    ]);
+  const annuler = (b) => setAnnulerCible(b);
+
+  const execAnnuler = async () => {
+    const b = annulerCible;
+    setAnnulerCible(null);
+    try {
+      await api.patch(`/bookings/${b._id}/cancel`);
+      recharger();
+    } catch (err) {
+      setErreurMsg(erreurApi(err));
+    }
+  };
 
   if (chargement) return <Loader />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -118,6 +116,27 @@ export function BookingsList({ navigation }) {
       ) : (
         liste.map((b) => <CarteReservation key={b._id} b={b} navigation={navigation} onAnnuler={annuler} />)
       )}
+
+      <ConfirmModal
+        visible={!!annulerCible}
+        icon="close-circle"
+        variant="danger"
+        titre="Annuler la réservation ?"
+        message="Le conducteur sera prévenu et la place sera libérée."
+        confirmLabel="Oui, annuler"
+        cancelLabel="Non"
+        onConfirm={execAnnuler}
+        onCancel={() => setAnnulerCible(null)}
+      />
+      <ConfirmModal
+        visible={!!erreurMsg}
+        icon="alert-circle"
+        variant="danger"
+        titre="Annulation impossible"
+        message={erreurMsg}
+        cancelLabel={null}
+        onConfirm={() => setErreurMsg(null)}
+      />
     </Screen>
   );
 }

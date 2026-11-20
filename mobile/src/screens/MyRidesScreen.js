@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import api from '../api';
-import { Avatar, Badge, Button, Card, EmptyState, ErrorState, Header, IconButton, Loader, Notice, RouteLine, Row, Screen, Segmented } from '../components/ui';
+import { Avatar, Badge, Button, Card, ConfirmModal, EmptyState, ErrorState, Header, IconButton, Loader, Notice, RouteLine, Row, Screen, Segmented } from '../components/ui';
 import { useDonnees } from '../hooks';
 import { colors, font, spacing } from '../theme';
 import { court, erreurApi, prix, quand } from '../utils';
@@ -66,6 +66,9 @@ function CarteTrajet({ t, navigation, onDemarrer, onAnnuler }) {
 /** Trajets publiés (conducteur) — utilisée dans l'onglet Trajets et l'écran Mes trajets. */
 export function RidesList({ navigation }) {
   const [filtre, setFiltre] = useState('avenir');
+  const [trajetADemarrer, setTrajetADemarrer] = useState(null);
+  const [trajetAAnnuler, setTrajetAAnnuler] = useState(null);
+  const [actionEnCours, setActionEnCours] = useState(false);
   const { data, chargement, erreur, rafraichir, rafraichissement, recharger, reessayer } = useDonnees(async () => {
     const [user, avenir, historique] = await Promise.all([
       api.get('/auth/me').then((r) => r.data),
@@ -75,38 +78,34 @@ export function RidesList({ navigation }) {
     return { user, avenir, historique };
   });
 
-  const demarrer = (t) =>
-    Alert.alert('Démarrer le trajet ?', 'Vos passagers confirmés seront prévenus que vous êtes en route.', [
-      { text: 'Pas encore', style: 'cancel' },
-      {
-        text: 'Démarrer',
-        onPress: async () => {
-          try {
-            await api.patch(`/rides/${t._id}/start`);
-            navigation.navigate('ActiveRide', { id: t._id });
-          } catch (err) {
-            Alert.alert('Impossible de démarrer', erreurApi(err));
-          }
-        },
-      },
-    ]);
+  const confirmerDemarrage = async () => {
+    if (!trajetADemarrer) return;
+    setActionEnCours(true);
+    try {
+      await api.patch(`/rides/${trajetADemarrer._id}/start`);
+      const tid = trajetADemarrer._id;
+      setTrajetADemarrer(null);
+      navigation.navigate('ActiveRide', { id: tid });
+    } catch (err) {
+      Alert.alert('Impossible de démarrer', erreurApi(err));
+    } finally {
+      setActionEnCours(false);
+    }
+  };
 
-  const annuler = (t) =>
-    Alert.alert('Annuler ce trajet ?', 'Toutes les réservations seront annulées et les passagers prévenus.', [
-      { text: 'Non', style: 'cancel' },
-      {
-        text: 'Oui, annuler',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.delete(`/rides/${t._id}`);
-            recharger();
-          } catch (err) {
-            Alert.alert('Annulation impossible', erreurApi(err));
-          }
-        },
-      },
-    ]);
+  const confirmerAnnulation = async () => {
+    if (!trajetAAnnuler) return;
+    setActionEnCours(true);
+    try {
+      await api.delete(`/rides/${trajetAAnnuler._id}`);
+      setTrajetAAnnuler(null);
+      recharger();
+    } catch (err) {
+      Alert.alert('Annulation impossible', erreurApi(err));
+    } finally {
+      setActionEnCours(false);
+    }
+  };
 
   if (chargement) return <Loader />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -149,8 +148,34 @@ export function RidesList({ navigation }) {
           onAction={() => navigation.navigate('PublishRide')}
         />
       ) : (
-        liste.map((t) => <CarteTrajet key={t._id} t={t} navigation={navigation} onDemarrer={demarrer} onAnnuler={annuler} />)
+        liste.map((t) => <CarteTrajet key={t._id} t={t} navigation={navigation} onDemarrer={setTrajetADemarrer} onAnnuler={setTrajetAAnnuler} />)
       )}
+
+      <ConfirmModal
+        visible={!!trajetADemarrer}
+        icon="car-sport"
+        title="Démarrer le trajet ?"
+        message="Vos passagers confirmés seront prévenus immédiatement que vous êtes en route."
+        confirmLabel="Démarrer"
+        confirmVariant="success"
+        cancelLabel="Pas encore"
+        loading={actionEnCours}
+        onConfirm={confirmerDemarrage}
+        onCancel={() => setTrajetADemarrer(null)}
+      />
+
+      <ConfirmModal
+        visible={!!trajetAAnnuler}
+        icon="alert-circle-outline"
+        title="Annuler ce trajet ?"
+        message="Toutes les réservations seront annulées et vos passagers seront avertis."
+        confirmLabel="Oui, annuler"
+        confirmVariant="danger"
+        cancelLabel="Garder le trajet"
+        loading={actionEnCours}
+        onConfirm={confirmerAnnulation}
+        onCancel={() => setTrajetAAnnuler(null)}
+      />
     </Screen>
   );
 }

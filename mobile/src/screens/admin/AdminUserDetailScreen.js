@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import api from '../../api';
-import { Avatar, Badge, Button, Card, Chip, ErrorState, Header, Input, Loader, Notice, Row, Screen, SectionTitle, Stars } from '../../components/ui';
+import { Avatar, Badge, Button, Card, Chip, ConfirmModal, ErrorState, Header, Input, Loader, Notice, Row, Screen, SectionTitle, Stars } from '../../components/ui';
 import { useDonnees } from '../../hooks';
 import { colors, font, radius, spacing } from '../../theme';
 import { erreurApi, tempsRelatif } from '../../utils';
@@ -21,28 +21,27 @@ export default function AdminUserDetailScreen({ route, navigation }) {
   const [modal, setModal] = useState(false);
   const [raison, setRaison] = useState('');
   const [action, setAction] = useState(false);
+  const [confirmerSuppression, setConfirmerSuppression] = useState(false);
+  const [infoMessage, setInfoMessage] = useState(null);
+  const [erreurMessage, setErreurMessage] = useState(null);
   const { data, chargement, erreur, recharger, reessayer } = useDonnees(() => api.get(`/admin/users/${id}`).then((r) => r.data), [id]);
 
   const executer = async (fn, retour = false) => {
     setAction(true);
     try {
       const { data: r } = await fn();
-      Alert.alert('Action effectuée', r.message);
-      if (retour) navigation.goBack();
-      else recharger();
+      setInfoMessage({ texte: r.message, retour });
+      if (!retour) recharger();
     } catch (err) {
-      Alert.alert('Action impossible', erreurApi(err));
+      setErreurMessage(erreurApi(err));
     } finally {
       setAction(false);
       setModal(false);
+      setConfirmerSuppression(false);
     }
   };
 
-  const supprimer = () =>
-    Alert.alert('Supprimer définitivement ce compte ?', 'Ses trajets à venir et réservations seront annulés. Cette action est irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => executer(() => api.delete(`/admin/users/${id}`), true) },
-    ]);
+  const supprimer = () => setConfirmerSuppression(true);
 
   if (chargement) return <Loader />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -140,6 +139,44 @@ export default function AdminUserDetailScreen({ route, navigation }) {
           </Pressable>
         </Pressable>
       </Modal>
+      <ConfirmModal
+        visible={confirmerSuppression}
+        icon="trash-outline"
+        title="Supprimer ce compte ?"
+        message="Ses trajets à venir et réservations seront annulés. Cette action est irréversible."
+        confirmLabel="Supprimer"
+        confirmVariant="danger"
+        cancelLabel="Annuler"
+        loading={action}
+        onConfirm={() => executer(() => api.delete(`/admin/users/${id}`), true)}
+        onCancel={() => setConfirmerSuppression(false)}
+      />
+
+      <ConfirmModal
+        visible={!!infoMessage}
+        icon="checkmark-circle-outline"
+        title="Action effectuée"
+        message={infoMessage?.texte}
+        confirmLabel="OK"
+        confirmVariant="primary"
+        cancelLabel={null}
+        onConfirm={() => {
+          const ret = infoMessage?.retour;
+          setInfoMessage(null);
+          if (ret) navigation.goBack();
+        }}
+      />
+
+      <ConfirmModal
+        visible={!!erreurMessage}
+        icon="alert-circle-outline"
+        title="Action impossible"
+        message={erreurMessage}
+        confirmLabel="OK"
+        confirmVariant="danger"
+        cancelLabel={null}
+        onConfirm={() => setErreurMessage(null)}
+      />
     </Screen>
   );
 }

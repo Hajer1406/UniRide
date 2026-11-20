@@ -12,6 +12,39 @@ function aujourdhui() {
   return { iso: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`, jour: NOMS_JOURS[d.getDay()], minutes: d.getHours() * 60 + d.getMinutes() };
 }
 
+/** Termine automatiquement les trajets "en_cours" dont l'heure de départ + durée + 60 min buffer est dépassée. */
+async function terminerTrajetsExpires() {
+  const maintenant = new Date();
+  // On cherche les trajets en cours depuis plus de (dureeMin + 60 min) OU démarrés il y a plus de 3h
+  const limite = new Date(maintenant.getTime() - 3 * 60 * 60 * 1000); // 3h max
+  const rides = await Ride.find({
+    statut: 'en_cours',
+    startedAt: { $lt: limite },
+  }).select('conducteur depart destination heureDepart startedAt dureeMin');
+
+  let termines = 0;
+  for (const ride of rides) {
+    // Vérifier si dureeMin est connue et si le trajet est vraiment terminé
+    const debutMs = new Date(ride.startedAt).getTime();
+    const dureeBuffer = ((ride.dureeMin || 60) + 60) * 60 * 1000; // dureeMin + 60 min buffer
+    if (maintenant.getTime() - debutMs < dureeBuffer) continue;
+
+    await Ride.updateOne({ _id: ride._id }, { $set: { statut: 'termine', finishedAt: maintenant } });
+
+    // Notifier le conducteur
+    await creerNotification({
+      destinataire: ride.conducteur,
+      type: 'trajet_termine',
+      titre: 'Trajet terminé automatiquement',
+      message: `Votre trajet ${court(ride.depart.label)} → ${court(ride.destination.label)} a été clôturé automatiquement.`,
+      donnees: { trajetId: ride._id },
+    }).catch(() => {});
+
+    termines += 1;
+  }
+  return termines;
+}
+
 /** Envoie « Votre trajet part dans 30 min » au conducteur et aux passagers confirmés. */
 async function envoyerRappels() {
   const { iso, jour, minutes } = aujourdhui();
@@ -55,8 +88,11 @@ async function envoyerRappels() {
 
 function demarrerRappels() {
   const tick = () => envoyerRappels().catch((err) => console.error('Erreur rappels :', err.message));
+  const tickExpires = () => terminerTrajetsExpires().catch((err) => console.error('Erreur auto-terminer :', err.message));
   setTimeout(tick, 5000);
-  return setInterval(tick, 60 * 1000);
+  setTimeout(tickExpires, 10000); // vérification initiale après 10s
+  setInterval(tick, 60 * 1000);
+  setInterval(tickExpires, 10 * 60 * 1000); // vérification toutes les 10 min
 }
 
-module.exports = { envoyerRappels, demarrerRappels };
+module.exports = { envoyerRappels, demarrerRappels, terminerTrajetsExpires };

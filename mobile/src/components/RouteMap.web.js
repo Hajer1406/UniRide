@@ -46,9 +46,10 @@ export default function RouteMap({ ride, height = 220, voiture, style }) {
   <script>
     try {
       var map = L.map('map', { zoomControl: false });
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap, CARTO'
       }).addTo(map);
 
       var pts = ${JSON.stringify(points)};

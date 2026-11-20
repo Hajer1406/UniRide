@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import api from '../api';
 import RouteMap from '../components/RouteMap';
 import {
@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmModal,
   ErrorState,
   Header,
   IconButton,
@@ -39,6 +40,10 @@ export default function RideDetailScreen({ route, navigation }) {
   const [places, setPlaces] = useState(1);
   const [message, setMessage] = useState('');
   const [envoi, setEnvoi] = useState(false);
+  const [infoMsg, setInfoMsg] = useState(null);
+  const [erreurMsg, setErreurMsg] = useState(null);
+  const [annulerConfirm, setAnnulerConfirm] = useState(false);
+  const [demarrerConfirm, setDemarrerConfirm] = useState(false);
 
   const { data, chargement, erreur, recharger, reessayer } = useDonnees(async () => {
     const [ride, resa] = await Promise.all([
@@ -55,46 +60,37 @@ export default function RideDetailScreen({ route, navigation }) {
       setModal(false);
       setMessage('');
       recharger();
-      Alert.alert('Demande envoyée', 'Le conducteur a été prévenu. Vous recevrez une notification dès sa réponse.');
+      setInfoMsg('Le conducteur a été prévenu. Vous recevrez une notification dès sa réponse.');
     } catch (err) {
-      Alert.alert('Réservation impossible', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     } finally {
       setEnvoi(false);
     }
   };
 
-  const annuler = () =>
-    Alert.alert('Annuler votre réservation ?', 'Le conducteur sera prévenu.', [
-      { text: 'Non', style: 'cancel' },
-      {
-        text: 'Oui, annuler',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.patch(`/bookings/${data.reservation._id}/cancel`);
-            recharger();
-          } catch (err) {
-            Alert.alert('Annulation impossible', erreurApi(err));
-          }
-        },
-      },
-    ]);
+  const annuler = () => setAnnulerConfirm(true);
 
-  const demarrer = () =>
-    Alert.alert('Démarrer le trajet ?', 'Vos passagers confirmés seront prévenus.', [
-      { text: 'Pas encore', style: 'cancel' },
-      {
-        text: 'Démarrer',
-        onPress: async () => {
-          try {
-            await api.patch(`/rides/${id}/start`);
-            navigation.replace('ActiveRide', { id });
-          } catch (err) {
-            Alert.alert('Impossible de démarrer', erreurApi(err));
-          }
-        },
-      },
-    ]);
+  const execAnnuler = async () => {
+    setAnnulerConfirm(false);
+    try {
+      await api.patch(`/bookings/${data.reservation._id}/cancel`);
+      recharger();
+    } catch (err) {
+      setErreurMsg(erreurApi(err));
+    }
+  };
+
+  const demarrer = () => setDemarrerConfirm(true);
+
+  const execDemarrer = async () => {
+    setDemarrerConfirm(false);
+    try {
+      await api.patch(`/rides/${id}/start`);
+      navigation.replace('ActiveRide', { id });
+    } catch (err) {
+      setErreurMsg(erreurApi(err));
+    }
+  };
 
   if (chargement) return <Loader />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -246,6 +242,47 @@ export default function RideDetailScreen({ route, navigation }) {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <ConfirmModal
+        visible={!!infoMsg}
+        icon="checkmark-circle"
+        variant="success"
+        titre="Demande envoyée"
+        message={infoMsg}
+        cancelLabel={null}
+        onConfirm={() => setInfoMsg(null)}
+      />
+      <ConfirmModal
+        visible={annulerConfirm}
+        icon="close-circle"
+        variant="danger"
+        titre="Annuler votre réservation ?"
+        message="Le conducteur sera prévenu et la place sera libérée."
+        confirmLabel="Oui, annuler"
+        cancelLabel="Non"
+        onConfirm={execAnnuler}
+        onCancel={() => setAnnulerConfirm(false)}
+      />
+      <ConfirmModal
+        visible={demarrerConfirm}
+        icon="play-circle"
+        variant="success"
+        titre="Démarrer le trajet ?"
+        message="Vos passagers confirmés seront prévenus que vous êtes en route."
+        confirmLabel="Démarrer"
+        cancelLabel="Pas encore"
+        onConfirm={execDemarrer}
+        onCancel={() => setDemarrerConfirm(false)}
+      />
+      <ConfirmModal
+        visible={!!erreurMsg}
+        icon="alert-circle"
+        variant="danger"
+        titre="Action impossible"
+        message={erreurMsg}
+        cancelLabel={null}
+        onConfirm={() => setErreurMsg(null)}
+      />
     </Screen>
   );
 }

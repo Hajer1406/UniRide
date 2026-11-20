@@ -43,6 +43,12 @@ export default function HomeScreen({ navigation, allerOnglet }) {
   const sansAdresse = !user.domicile;
   const sansPlanning = !schedule?.jours?.length;
 
+  const voirTousLesTrajets = () => {
+    navigation.navigate('RideResults', {
+      suggestions: true,
+    });
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -158,7 +164,7 @@ export default function HomeScreen({ navigation, allerOnglet }) {
           <StatTile icon="car-outline" value={stats?.trajetsEffectues ?? 0} label="Trajets" />
         </Row>
 
-        <SectionTitle action={suggestions.length ? 'Tout voir' : null} onAction={() => allerOnglet('recherche')}>
+        <SectionTitle action={suggestions.length ? 'Tout voir' : null} onAction={voirTousLesTrajets}>
           {user.vehicule ? 'Trajets disponibles (en passager)' : 'Suggestions pour vous'}
         </SectionTitle>
         {user.vehicule && suggestions.length > 0 ? (

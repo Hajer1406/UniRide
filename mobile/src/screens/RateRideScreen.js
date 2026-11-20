@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import api from '../api';
-import { Avatar, Badge, Button, Card, Chip, EmptyState, ErrorState, Header, Input, Ionicons, Loader, Row, Screen } from '../components/ui';
+import { Avatar, Badge, Button, Card, Chip, ConfirmModal, EmptyState, ErrorState, Header, Input, Ionicons, Loader, Row, Screen } from '../components/ui';
 import { useDonnees } from '../hooks';
 import { colors, font, spacing } from '../theme';
 import { court, erreurApi } from '../utils';
@@ -15,6 +15,7 @@ export default function RateRideScreen({ navigation }) {
   const [compliments, setCompliments] = useState([]);
   const [envoi, setEnvoi] = useState(false);
   const [faits, setFaits] = useState(0);
+  const [erreurMsg, setErreurMsg] = useState(null);
 
   const { data, setData, chargement, erreur, reessayer } = useDonnees(async () => {
     const [aNoter, disponibles] = await Promise.all([api.get('/reviews/a-noter'), api.get('/reviews/compliments')]);
@@ -53,7 +54,7 @@ export default function RateRideScreen({ navigation }) {
 
   const envoyer = async () => {
     if (!note) {
-      Alert.alert('Choisissez une note', 'Touchez les étoiles pour noter de 1 à 5.');
+      setErreurMsg('Touchez les étoiles pour noter de 1 à 5.');
       return;
     }
     setEnvoi(true);
@@ -62,7 +63,7 @@ export default function RateRideScreen({ navigation }) {
       setFaits((n) => n + 1);
       suivant();
     } catch (err) {
-      Alert.alert('Avis non enregistré', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     } finally {
       setEnvoi(false);
     }
@@ -113,6 +114,16 @@ export default function RateRideScreen({ navigation }) {
       >
         <Text style={{ color: colors.danger, fontWeight: '600' }}>Un problème ? Signaler {courant.cible.nom.split(' ')[0]}</Text>
       </Pressable>
+
+      <ConfirmModal
+        visible={!!erreurMsg}
+        icon="alert-circle"
+        variant="danger"
+        titre="Avis non enregistré"
+        message={erreurMsg}
+        cancelLabel={null}
+        onConfirm={() => setErreurMsg(null)}
+      />
     </Screen>
   );
 }

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import api from '../api';
 import TimeInput from '../components/TimeInput';
-import { Button, Card, Header, Input, Notice, RouteLine, Row, Screen, Stepper } from '../components/ui';
-import { font, spacing } from '../theme';
+import { Button, Card, ConfirmModal, Header, Input, Notice, RouteLine, Row, Screen, Stepper } from '../components/ui';
+import { colors, font, spacing } from '../theme';
 import { HEURE, court, erreurApi, quand } from '../utils';
 
 /** Modifier l'heure, les places libres ou le prix d'un trajet à venir (module D). */
@@ -13,17 +13,29 @@ export default function EditRideScreen({ navigation, route }) {
   const [places, setPlaces] = useState(t.places);
   const [prix, setPrix] = useState(String(t.prix));
   const [envoi, setEnvoi] = useState(false);
+  const [erreurMsg, setErreurMsg] = useState(null);
 
   const enregistrer = async () => {
     const montant = Number(prix.replace(',', '.'));
-    if (!HEURE.test(heure)) return Alert.alert('Heure invalide', 'Format HH:MM, ex : 07:45');
-    if (!Number.isFinite(montant) || montant < 0) return Alert.alert('Prix invalide', 'Indiquez un montant en DT.');
+    if (!HEURE.test(heure)) return setErreurMsg('Format HH:MM, ex : 07:45');
+    if (!Number.isFinite(montant) || montant < 0) return setErreurMsg('Indiquez un montant en DT.');
+    if (t && !t.recurrent && t.date) {
+      const dateTrajet = new Date(t.date).toISOString().slice(0, 10);
+      const aujourd = new Date().toISOString().slice(0, 10);
+      if (dateTrajet === aujourd) {
+        const d = new Date();
+        const heureActuelle = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        if (heure <= heureActuelle) {
+          return setErreurMsg(`L'heure de départ (${heure}) est déjà passée pour aujourd'hui (il est ${heureActuelle}). Choisissez une heure future.`);
+        }
+      }
+    }
     setEnvoi(true);
     try {
       await api.patch(`/rides/${t._id}`, { heureDepart: heure, places, prix: montant });
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Modification impossible', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     } finally {
       setEnvoi(false);
     }
@@ -58,6 +70,16 @@ export default function EditRideScreen({ navigation, route }) {
         </Row>
         <Input label="Prix par passager (DT)" icon="cash-outline" value={prix} onChangeText={setPrix} keyboardType="decimal-pad" style={{ marginBottom: 0 }} />
       </Card>
+
+      <ConfirmModal
+        visible={!!erreurMsg}
+        icon="alert-circle"
+        variant="danger"
+        titre="Saisie invalide"
+        message={erreurMsg}
+        cancelLabel={null}
+        onConfirm={() => setErreurMsg(null)}
+      />
     </Screen>
   );
 }

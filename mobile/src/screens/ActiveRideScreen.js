@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api';
 import RouteMap from '../components/RouteMap';
-import { Avatar, Badge, Button, Card, ErrorState, Header, IconButton, Ionicons, Loader, ProgressBar, Row, Screen, StatTile } from '../components/ui';
+import { Avatar, Badge, Button, Card, ConfirmModal, ErrorState, Header, IconButton, Ionicons, Loader, ProgressBar, Row, Screen, StatTile } from '../components/ui';
 import { useDonnees } from '../hooks';
 import { getSocket } from '../socket';
 import { colors, font, spacing } from '../theme';
@@ -30,6 +30,8 @@ export default function ActiveRideScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const [action, setAction] = useState(false);
   const [recap, setRecap] = useState(null);
+  const [confirmerTerminer, setConfirmerTerminer] = useState(false);
+  const [erreurTerminer, setErreurTerminer] = useState(null);
   const [, setTick] = useState(0);
   const { data, setData, chargement, erreur, recharger, reessayer } = useDonnees(() => api.get(`/rides/${id}/active`).then((r) => r.data), [id]);
 
@@ -51,25 +53,21 @@ export default function ActiveRideScreen({ route, navigation }) {
     };
   }, [id, recharger]);
 
-  const terminer = () =>
-    Alert.alert('Terminer le trajet ?', 'Confirmez que tous les passagers ont été déposés.', [
-      { text: 'Pas encore', style: 'cancel' },
-      {
-        text: 'Terminer',
-        onPress: async () => {
-          setAction(true);
-          try {
-            const res = await api.patch(`/rides/${id}/finish`);
-            setRecap(res.data.recapitulatif);
-            setData((d) => ({ ...d, ride: { ...d.ride, statut: 'termine' } }));
-          } catch (err) {
-            Alert.alert('Impossible de terminer', erreurApi(err));
-          } finally {
-            setAction(false);
-          }
-        },
-      },
-    ]);
+  const terminer = () => setConfirmerTerminer(true);
+
+  const execTerminer = async () => {
+    setConfirmerTerminer(false);
+    setAction(true);
+    try {
+      const res = await api.patch(`/rides/${id}/finish`);
+      setRecap(res.data.recapitulatif);
+      setData((d) => ({ ...d, ride: { ...d.ride, statut: 'termine' } }));
+    } catch (err) {
+      setErreurTerminer(erreurApi(err));
+    } finally {
+      setAction(false);
+    }
+  };
 
   if (chargement) return <Loader text="Chargement du trajet…" />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -211,6 +209,27 @@ export default function ActiveRideScreen({ route, navigation }) {
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={confirmerTerminer}
+        icon="flag"
+        variant="success"
+        titre="Terminer le trajet ?"
+        message="Confirmez que tous les passagers ont été déposés."
+        confirmLabel="Terminer"
+        cancelLabel="Pas encore"
+        onConfirm={execTerminer}
+        onCancel={() => setConfirmerTerminer(false)}
+      />
+      <ConfirmModal
+        visible={!!erreurTerminer}
+        icon="alert-circle"
+        variant="danger"
+        titre="Impossible de terminer"
+        message={erreurTerminer}
+        cancelLabel={null}
+        onConfirm={() => setErreurTerminer(null)}
+      />
     </Screen>
   );
 }

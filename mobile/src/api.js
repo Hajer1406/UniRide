@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 const defaultUrl =
   Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname === 'localhost'
     ? 'http://localhost:5000'
-    : 'http://192.168.1.43:5000';
+    : 'http://10.140.110.210:5000';
 
 export const SERVER_URL = process.env.EXPO_PUBLIC_API_URL || defaultUrl;
 export const API_URL = `${SERVER_URL}/api`;

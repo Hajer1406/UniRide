@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import api from '../api';
-import { Avatar, Badge, Card, ErrorState, Header, Ionicons, ListItem, Loader, Row, Screen, Stars } from '../components/ui';
+import { Avatar, Badge, Card, ConfirmModal, ErrorState, Header, Ionicons, ListItem, Loader, Row, Screen, Stars } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { useDonnees } from '../hooks';
 import { colors, font, spacing } from '../theme';
@@ -13,6 +13,10 @@ import { MUSIQUE, court, erreurApi } from '../utils';
 export default function ProfileScreen({ navigation }) {
   const { deconnecter } = useAuth();
   const [photoEnvoi, setPhotoEnvoi] = useState(false);
+  const [modalDeconnexion, setModalDeconnexion] = useState(false);
+  const [modalSupprimerPhoto, setModalSupprimerPhoto] = useState(false);
+  const [modalSupprimerCompte, setModalSupprimerCompte] = useState(false);
+  const [erreurMsg, setErreurMsg] = useState(null);
   const { data, setData, chargement, erreur, rafraichir, rafraichissement, reessayer } = useDonnees(async () => {
     const [user, stats, schedule] = await Promise.all([
       api.get('/auth/me').then((r) => r.data),
@@ -28,17 +32,13 @@ export default function ProfileScreen({ navigation }) {
       await api.delete('/users/me/photo');
       setData((d) => ({ ...d, user: { ...d.user, photo: '' } }));
     } catch (err) {
-      Alert.alert('Suppression impossible', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     } finally {
       setPhotoEnvoi(false);
     }
   };
 
-  const confirmerSuppression = () =>
-    Alert.alert('Supprimer la photo ?', 'Votre profil utilisera à nouveau vos initiales.', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: supprimerPhoto },
-    ]);
+  const confirmerSuppression = () => setModalSupprimerPhoto(true);
 
   const changerPhoto = async () => {
     const choix = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
@@ -54,36 +54,25 @@ export default function ProfileScreen({ navigation }) {
       await api.put('/users/me/photo', { photo });
       setData((d) => ({ ...d, user: { ...d.user, photo } }));
     } catch (err) {
-      Alert.alert('Photo non enregistrée', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     } finally {
       setPhotoEnvoi(false);
     }
   };
 
-  const seDeconnecter = () =>
-    Alert.alert('Se déconnecter ?', 'Vous devrez saisir à nouveau votre mot de passe.', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Se déconnecter', style: 'destructive', onPress: deconnecter },
-    ]);
+  const seDeconnecter = () => setModalDeconnexion(true);
 
   const supprimerCompte = async () => {
+    setModalSupprimerCompte(false);
     try {
       await api.delete('/users/me');
       deconnecter();
     } catch (err) {
-      Alert.alert('Suppression impossible', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     }
   };
 
-  const confirmerSuppressionCompte = () =>
-    Alert.alert(
-      'Supprimer mon compte ?',
-      'Cette action est irréversible. Vos trajets, réservations et évaluations seront définitivement supprimés.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer définitivement', style: 'destructive', onPress: supprimerCompte },
-      ]
-    );
+  const confirmerSuppressionCompte = () => setModalSupprimerCompte(true);
 
   if (chargement) return <Loader />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -162,6 +151,46 @@ export default function ProfileScreen({ navigation }) {
         <ListItem icon="trash-outline" title="Supprimer mon compte" danger onPress={confirmerSuppressionCompte} right={null} />
       </Card>
       <Text style={[font.caption, { textAlign: 'center', marginTop: spacing.md, color: colors.muted }]}>UniRide · Version 1.0.0 (ISET Nabeul)</Text>
+
+      <ConfirmModal
+        visible={modalDeconnexion}
+        icon="log-out"
+        variant="danger"
+        titre="Se déconnecter ?"
+        message="Vous devrez saisir à nouveau votre mot de passe."
+        confirmLabel="Se déconnecter"
+        onConfirm={() => { setModalDeconnexion(false); deconnecter(); }}
+        onCancel={() => setModalDeconnexion(false)}
+      />
+      <ConfirmModal
+        visible={modalSupprimerPhoto}
+        icon="trash"
+        variant="danger"
+        titre="Supprimer la photo ?"
+        message="Votre profil utilisera à nouveau vos initiales."
+        confirmLabel="Supprimer"
+        onConfirm={() => { setModalSupprimerPhoto(false); supprimerPhoto(); }}
+        onCancel={() => setModalSupprimerPhoto(false)}
+      />
+      <ConfirmModal
+        visible={modalSupprimerCompte}
+        icon="trash"
+        variant="danger"
+        titre="Supprimer mon compte ?"
+        message="Cette action est irréversible. Vos trajets, réservations et évaluations seront définitivement supprimés."
+        confirmLabel="Supprimer définitivement"
+        onConfirm={supprimerCompte}
+        onCancel={() => setModalSupprimerCompte(false)}
+      />
+      <ConfirmModal
+        visible={!!erreurMsg}
+        icon="alert-circle"
+        variant="danger"
+        titre="Erreur"
+        message={erreurMsg}
+        cancelLabel={null}
+        onConfirm={() => setErreurMsg(null)}
+      />
     </Screen>
   );
 }

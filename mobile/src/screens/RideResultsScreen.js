@@ -23,21 +23,32 @@ export default function RideResultsScreen({ route, navigation }) {
 
   const charger = useCallback(async () => {
     try {
-      const { data } = await api.get('/rides/search', {
-        params: {
-          lat: p.lat,
-          lng: p.lng,
-          date: p.date,
-          heure: p.heure,
-          prixMax: p.prixMax,
-          noteMin: p.noteMin,
-          nonFumeur: p.nonFumeur ? 'true' : undefined,
-          mixte: p.mixte ? 'true' : undefined,
-          tri,
-        },
-      });
-      setTrajets(data);
-      setErreur('');
+      if (p.suggestions) {
+        const { data } = await api.get('/rides/suggestions');
+        const res = [...data];
+        if (tri === 'prix') res.sort((a, b) => a.prix - b.prix);
+        else if (tri === 'heure') res.sort((a, b) => (a.heureDepart || '').localeCompare(b.heureDepart || ''));
+        else res.sort((a, b) => b.scoreMatch - a.scoreMatch);
+        setTrajets(res);
+        setErreur('');
+      } else {
+        const { data } = await api.get('/rides/search', {
+          params: {
+            lat: p.lat,
+            lng: p.lng,
+            date: p.date,
+            heure: p.heure,
+            prixMax: p.prixMax,
+            noteMin: p.noteMin,
+            nonFumeur: p.nonFumeur ? 'true' : undefined,
+            mixte: p.mixte ? 'true' : undefined,
+            rayon: p.rayon || 40,
+            tri,
+          },
+        });
+        setTrajets(data);
+        setErreur('');
+      }
     } catch (err) {
       setErreur(erreurApi(err, 'Recherche impossible'));
     } finally {
@@ -53,8 +64,8 @@ export default function RideResultsScreen({ route, navigation }) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
-        title={`Depuis ${court(p.label)}`}
-        subtitle={`${dateLisible(p.date)}${p.heure ? ` · vers ${p.heure}` : ''}`}
+        title={p.suggestions ? 'Trajets disponibles' : `Depuis ${court(p.label)}`}
+        subtitle={p.suggestions ? 'Tous les trajets compatibles vers l’ISET' : `${dateLisible(p.date)}${p.heure ? ` · vers ${p.heure}` : ''}`}
         onBack={() => navigation.goBack()}
       >
         <Row gap={8} style={{ marginTop: spacing.sm }}>

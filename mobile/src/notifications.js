@@ -51,7 +51,8 @@ export function ouvrirNotification(navigation, notif) {
     case 'trajet_termine':
       return navigation.navigate('RateRide');
     case 'sos':
-      return allerOnglet(navigation, 'tableau');
+      // Notif SOS : informative seulement, ne pas quitter l'écran actuel
+      return null;
     case 'signalement_traite':
       return null;
     case 'nouvel_avis':

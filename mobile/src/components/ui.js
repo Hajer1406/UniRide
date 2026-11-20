@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -490,6 +491,52 @@ export function Loader({ text }) {
   );
 }
 
+export function ConfirmModal({
+  visible,
+  title,
+  message,
+  confirmLabel = 'Confirmer',
+  cancelLabel = 'Annuler',
+  confirmVariant = 'primary',
+  icon = 'help-circle-outline',
+  onConfirm,
+  onCancel,
+  loading = false,
+}) {
+  const iconBg = confirmVariant === 'danger' ? colors.dangerSoft : confirmVariant === 'success' ? colors.successSoft : colors.primarySoft;
+  const iconColor = confirmVariant === 'danger' ? colors.danger : confirmVariant === 'success' ? colors.success : colors.primary;
+
+  return (
+    <Modal visible={!!visible} transparent animationType="fade" onRequestClose={onCancel || onConfirm}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <View style={[styles.modalIconBox, { backgroundColor: iconBg }]}>
+            <Ionicons name={icon} size={28} color={iconColor} />
+          </View>
+          <Text style={[font.h3, { textAlign: 'center', marginTop: spacing.md }]}>{title}</Text>
+          {message ? (
+            <Text style={[font.small, { textAlign: 'center', color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.md, lineHeight: 18 }]}>
+              {message}
+            </Text>
+          ) : null}
+          <Row gap={spacing.sm} style={{ marginTop: spacing.md, width: '100%', justifyContent: cancelLabel ? 'space-between' : 'center' }}>
+            {cancelLabel ? (
+              <Button title={cancelLabel} variant="secondary" style={{ flex: 1 }} onPress={onCancel} disabled={loading} />
+            ) : null}
+            <Button
+              title={confirmLabel}
+              variant={confirmVariant}
+              style={{ flex: cancelLabel ? 1 : undefined, minWidth: cancelLabel ? undefined : 130 }}
+              onPress={onConfirm}
+              loading={loading}
+            />
+          </Row>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export function ErrorState({ text, onRetry }) {
   return <EmptyState icon="cloud-offline-outline" title="Oups" text={text} action={onRetry ? 'Réessayer' : null} onAction={onRetry} />;
 }
@@ -582,4 +629,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: spacing.xl },
   emptyIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, backgroundColor: colors.background },
+  modalOverlay: { flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  modalCard: { backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.xl, width: '100%', maxWidth: 360, alignItems: 'center', ...shadow.card },
+  modalIconBox: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
 });

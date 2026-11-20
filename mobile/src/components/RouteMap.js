@@ -1,9 +1,9 @@
 import React, { useCallback, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { colors, radius } from '../theme';
 
-/** Carte OpenStreetMap (tuiles gratuites) avec l'itinéraire d'un trajet. */
+/** Carte native (Google Maps sur Android / Apple Maps sur iOS) avec l'itinéraire d'un trajet. */
 export default function RouteMap({ ride, height = 220, voiture, style }) {
   const ref = useRef(null);
   const points = (ride.itineraire || []).map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
@@ -25,7 +25,7 @@ export default function RouteMap({ ride, height = 220, voiture, style }) {
       <MapView
         ref={ref}
         style={StyleSheet.absoluteFill}
-        mapType="none"
+        mapType="standard"
         initialRegion={{
           latitude: (latD + latA) / 2,
           longitude: (lngD + lngA) / 2,
@@ -35,7 +35,6 @@ export default function RouteMap({ ride, height = 220, voiture, style }) {
         onMapReady={cadrer}
         toolbarEnabled={false}
       >
-        <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} tileSize={256} />
         {points.length > 1 ? <Polyline coordinates={points} strokeWidth={5} strokeColor={colors.primary} /> : null}
         <Marker coordinate={depart} title="Départ" description={ride.depart.label} pinColor="blue" />
         <Marker coordinate={arrivee} title="Arrivée" description={ride.destination.label} pinColor="gold" />

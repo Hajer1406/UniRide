@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import api from '../../api';
-import { Avatar, Badge, Button, Card, ErrorState, Header, IconButton, Ionicons, Loader, ProgressBar, Row, Screen, SectionTitle, StatTile, Stars } from '../../components/ui';
+import { Avatar, Badge, Button, Card, ConfirmModal, ErrorState, Header, IconButton, Ionicons, Loader, ProgressBar, Row, Screen, SectionTitle, StatTile, Stars } from '../../components/ui';
 import { useAuth, useRealtime } from '../../context/AuthContext';
 import { useDonnees } from '../../hooks';
 import { getSocket } from '../../socket';
@@ -12,6 +12,11 @@ import { court, erreurApi, nombre, tempsRelatif } from '../../utils';
 export default function AdminDashboardScreen({ navigation, allerOnglet }) {
   const { deconnecter } = useAuth();
   const { nbNotifs } = useRealtime();
+  const [alerteAResoudre, setAlerteAResoudre] = useState(null);
+  const [confirmerQuitter, setConfirmerQuitter] = useState(false);
+  const [alerteRecue, setAlerteRecue] = useState(null);
+  const [actionEnCours, setActionEnCours] = useState(false);
+
   const { data, chargement, erreur, rafraichir, rafraichissement, recharger, reessayer } = useDonnees(async () => {
     const [d, sos] = await Promise.all([api.get('/admin/dashboard'), api.get('/admin/sos', { params: { statut: 'active' } })]);
     return { ...d.data, alertes: sos.data };
@@ -22,33 +27,28 @@ export default function AdminDashboardScreen({ navigation, allerOnglet }) {
     const socket = getSocket();
     const surSos = (s) => {
       recharger();
-      Alert.alert('🚨 Alerte SOS', `${s.nom} a déclenché une alerte.\n${s.lien}`);
+      setAlerteRecue(s);
     };
     socket?.on('sos:new', surSos);
     return () => socket?.off('sos:new', surSos);
   }, [recharger]);
 
-  const resoudre = (s) =>
-    Alert.alert('Clore cette alerte ?', `Confirmez que ${s.auteur?.nom || 'l’étudiant'} est en sécurité.`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Alerte résolue',
-        onPress: async () => {
-          try {
-            await api.patch(`/admin/sos/${s._id}/resolve`, { note: 'Situation vérifiée par l’administration' });
-            recharger();
-          } catch (err) {
-            Alert.alert('Erreur', erreurApi(err));
-          }
-        },
-      },
-    ]);
+  const confirmerResolution = async () => {
+    if (!alerteAResoudre) return;
+    setActionEnCours(true);
+    try {
+      await api.patch(`/admin/sos/${alerteAResoudre._id}/resolve`, { note: 'Situation vérifiée par l’administration' });
+      setAlerteAResoudre(null);
+      recharger();
+    } catch (err) {
+      Alert.alert('Erreur', erreurApi(err));
+    } finally {
+      setActionEnCours(false);
+    }
+  };
 
-  const quitter = () =>
-    Alert.alert('Se déconnecter ?', '', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Se déconnecter', style: 'destructive', onPress: () => deconnecter() },
-    ]);
+  const resoudre = (s) => setAlerteAResoudre(s);
+  const quitter = () => setConfirmerQuitter(true);
 
   if (chargement) return <Loader />;
   if (erreur) return <ErrorState text={erreur} onRetry={reessayer} />;
@@ -188,6 +188,49 @@ export default function AdminDashboardScreen({ navigation, allerOnglet }) {
           ))
         )}
       </Card>
+
+      <ConfirmModal
+        visible={!!alerteRecue}
+        icon="alert-circle"
+        title="🚨 Alerte SOS en direct !"
+        message={`${alerteRecue?.nom || 'Un étudiant'} a déclenché une alerte de détresse.`}
+        confirmLabel="Voir la position"
+        confirmVariant="danger"
+        cancelLabel="Fermer"
+        onConfirm={() => {
+          if (alerteRecue?.lien) Linking.openURL(alerteRecue.lien).catch(() => {});
+          setAlerteRecue(null);
+        }}
+        onCancel={() => setAlerteRecue(null)}
+      />
+
+      <ConfirmModal
+        visible={!!alerteAResoudre}
+        icon="shield-checkmark"
+        title="Clore cette alerte SOS ?"
+        message={`Confirmez que ${alerteAResoudre?.auteur?.nom || 'l’étudiant'} est en sécurité.`}
+        confirmLabel="Alerte résolue"
+        confirmVariant="success"
+        cancelLabel="Annuler"
+        loading={actionEnCours}
+        onConfirm={confirmerResolution}
+        onCancel={() => setAlerteAResoudre(null)}
+      />
+
+      <ConfirmModal
+        visible={confirmerQuitter}
+        icon="log-out-outline"
+        title="Se déconnecter ?"
+        message="Vous devrez vous reconnecter pour accéder au tableau de bord d'administration."
+        confirmLabel="Se déconnecter"
+        confirmVariant="danger"
+        cancelLabel="Annuler"
+        onConfirm={() => {
+          setConfirmerQuitter(false);
+          deconnecter();
+        }}
+        onCancel={() => setConfirmerQuitter(false)}
+      />
     </Screen>
   );
 }

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import api from '../api';
 import AddressPicker from '../components/AddressPicker';
-import { Button, Card, Chip, Field, Header, Input, Loader, Row, Screen, SectionTitle, Toggle } from '../components/ui';
+import { Button, Card, Chip, ConfirmModal, Field, Header, Input, Loader, Row, Screen, SectionTitle, Toggle } from '../components/ui';
 import { FILIERES } from './RegisterScreen';
 import { erreurApi } from '../utils';
 
@@ -16,6 +16,7 @@ const MUSIQUES = [
 export default function EditProfileScreen({ navigation }) {
   const [chargement, setChargement] = useState(true);
   const [envoi, setEnvoi] = useState(false);
+  const [erreurMsg, setErreurMsg] = useState(null);
   const [nom, setNom] = useState('');
   const [filiere, setFiliere] = useState('');
   const [telephone, setTelephone] = useState('');
@@ -43,13 +44,13 @@ export default function EditProfileScreen({ navigation }) {
         setContactNom(data.contactConfiance?.nom || '');
         setContactTel(data.contactConfiance?.telephone || '');
       })
-      .catch((err) => Alert.alert('Erreur', erreurApi(err)))
+      .catch((err) => setErreurMsg(erreurApi(err)))
       .finally(() => setChargement(false));
   }, []);
 
   const enregistrer = async () => {
     if (nom.trim().length < 3) {
-      Alert.alert('Nom requis', 'Indiquez votre nom complet.');
+      setErreurMsg('Indiquez votre nom complet (minimum 3 caractères).');
       return;
     }
     setEnvoi(true);
@@ -64,7 +65,7 @@ export default function EditProfileScreen({ navigation }) {
       });
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Enregistrement impossible', erreurApi(err));
+      setErreurMsg(erreurApi(err));
     } finally {
       setEnvoi(false);
     }
@@ -131,6 +132,16 @@ export default function EditProfileScreen({ navigation }) {
           </Row>
         </Field>
       </Card>
+
+      <ConfirmModal
+        visible={!!erreurMsg}
+        icon="alert-circle"
+        variant="danger"
+        titre="Erreur"
+        message={erreurMsg}
+        cancelLabel={null}
+        onConfirm={() => setErreurMsg(null)}
+      />
     </Screen>
   );
 }

@@ -19,6 +19,10 @@ const CHAMPS_CONDUCTEUR = 'nom filiere photo noteMoyenne nombreAvis preferences 
 const SEUIL_SUGGESTION = 75; // score minimum pour envoyer une notification « nouvelle suggestion »
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
+const heureActuelleFormat = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 const idValide = (id) => mongoose.isValidObjectId(id);
 
 function pointValide(p) {
@@ -131,6 +135,14 @@ router.post('/', auth, async (req, res) => {
       if (date < aujourdhui()) {
         return res.status(400).json({ message: 'La date ne peut pas être dans le passé' });
       }
+      if (date === aujourdhui()) {
+        const maintenant = heureActuelleFormat();
+        if (heureDepart <= maintenant) {
+          return res.status(400).json({
+            message: `L'heure de départ (${heureDepart}) est déjà passée pour aujourd'hui (il est ${maintenant}). Choisissez une heure à venir.`,
+          });
+        }
+      }
     }
 
     let route;
@@ -178,6 +190,29 @@ router.post('/', auth, async (req, res) => {
 router.get('/mine', auth, async (req, res) => {
   try {
     const historique = req.query.historique === '1';
+
+    // Auto-clôturer les trajets ponctuels actifs dont l'heure de départ est dépassée de plus de 3h
+    const now = new Date();
+    const dateJour = aujourdhui();
+    const minutesNow = now.getHours() * 60 + now.getMinutes();
+
+    const trajetsActifs = await Ride.find({ conducteur: req.userId, statut: 'actif', recurrent: false });
+    for (const r of trajetsActifs) {
+      if (r.date) {
+        const dIso = new Date(r.date).toISOString().slice(0, 10);
+        if (dIso < dateJour) {
+          // Date passée : terminer
+          await Ride.updateOne({ _id: r._id }, { $set: { statut: 'termine', finishedAt: r.date } });
+        } else if (dIso === dateJour && r.heureDepart) {
+          const [h, m] = r.heureDepart.split(':').map(Number);
+          if (minutesNow > h * 60 + m + 180) {
+            // Même jour mais dépassé de +3h : terminer
+            await Ride.updateOne({ _id: r._id }, { $set: { statut: 'termine', finishedAt: now } });
+          }
+        }
+      }
+    }
+
     const rides = await Ride.find({
       conducteur: req.userId,
       statut: historique ? { $in: ['termine', 'annule'] } : { $in: ['actif', 'en_cours'] },
@@ -233,7 +268,7 @@ router.get('/suggestions', auth, async (req, res) => {
       .filter((r) => r.conducteur)
       .map((r) => enrichir(r, ctx))
       .sort((a, b) => b.scoreMatch - a.scoreMatch)
-      .slice(0, 10);
+      .slice(0, 50);
 
     res.json(resultats);
   } catch (err) {
@@ -395,12 +430,30 @@ function estJourDuTrajet(ride, now = new Date()) {
 }
 
 function verifierHeureDepart(ride, now = new Date()) {
-  if (!ride.heureDepart) return true;
+  if (!ride.heureDepart) return { valide: true };
   const [h, m] = ride.heureDepart.split(':').map(Number);
   const minutesDepart = h * 60 + m;
   const minutesActuelles = now.getHours() * 60 + now.getMinutes();
-  // Permis entre 45 min avant l'heure prévue et jusqu'à 3h après
-  return minutesActuelles >= minutesDepart - 45 && minutesActuelles <= minutesDepart + 180;
+
+  if (minutesActuelles < minutesDepart - 45) {
+    const minDispo = Math.max(0, minutesDepart - 45);
+    const hDisp = String(Math.floor(minDispo / 60)).padStart(2, '0');
+    const mDisp = String(minDispo % 60).padStart(2, '0');
+    return {
+      valide: false,
+      message: `Ce trajet part à ${ride.heureDepart}.\nVous pourrez appuyer sur Démarrer au plus tôt à ${hDisp}:${mDisp} (45 minutes avant le départ).`,
+    };
+  }
+
+  if (minutesActuelles > minutesDepart + 180) {
+    return {
+      valide: false,
+      depasse: true,
+      message: `L'heure prévue pour ce trajet (${ride.heureDepart}) est dépassée de plus de 3 heures.\nCe trajet ne peut plus être démarré.`,
+    };
+  }
+
+  return { valide: true };
 }
 
 // 7. Démarrer un trajet (US21)
@@ -429,10 +482,15 @@ router.patch('/:id/start', auth, async (req, res) => {
           message: `Ce trajet est programmé pour le ${dateStr}.\nVous ne pouvez le démarrer que le jour prévu.`,
         });
       }
-      if (!verifierHeureDepart(ride, now)) {
-        return res.status(400).json({
-          message: `Ce trajet part à ${ride.heureDepart}.\nVous pourrez appuyer sur Démarrer au plus tôt 45 minutes avant le départ.`,
-        });
+      const checkHeure = verifierHeureDepart(ride, now);
+      if (!checkHeure.valide) {
+        if (checkHeure.depasse && !ride.recurrent) {
+          // Trajet ponctuel dépassé de plus de 3h : auto-clôturer en statut terminé
+          ride.statut = 'termine';
+          ride.finishedAt = now;
+          await ride.save().catch(() => {});
+        }
+        return res.status(400).json({ message: checkHeure.message });
       }
     } else {
       console.log(`[MODE DEMO] Démarrage du trajet ${ride._id} autorisé hors contrainte horaire pour soutenance.`);
@@ -598,6 +656,15 @@ router.patch('/:id', auth, async (req, res) => {
 
     if (heureDepart !== undefined && heureDepart !== ride.heureDepart) {
       if (!HEURE.test(heureDepart)) return res.status(400).json({ message: 'Heure invalide (format HH:MM)' });
+      if (!ride.recurrent && ride.date) {
+        const dateTrajet = new Date(ride.date).toISOString().slice(0, 10);
+        if (dateTrajet === aujourdhui() && heureDepart <= heureActuelleFormat()) {
+          const maintenant = heureActuelleFormat();
+          return res.status(400).json({
+            message: `L'heure de départ (${heureDepart}) est déjà passée pour aujourd'hui (il est ${maintenant}). Choisissez une heure à venir.`,
+          });
+        }
+      }
       ride.heureDepart = heureDepart;
       ride.heureArrivee = ajouterMinutes(heureDepart, ride.dureeMin || 0);
       changements.push(`départ à ${heureDepart}`);
